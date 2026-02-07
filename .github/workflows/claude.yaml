@@ -44,6 +44,9 @@ jobs:
             }
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
+          # 设置 prompt
+          prompt: "请使用中文回答"
+
           # Optional: Customize the trigger phrase (default: @claude)
           # trigger_phrase: "/claude"
 
