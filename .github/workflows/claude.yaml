@@ -34,6 +34,14 @@ jobs:
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
+          # 参考 url：https://github.com/anthropics/claude-code-action/blob/b113f49a56229d8276e2bf05743ad6900121239c/docs/configuration.md#claude-code-settings
+          # 修改 base url 为 GLM 模型
+          settings: |
+            {
+              "env": {
+                "ANTHROPIC_BASE_URL": "https://open.bigmodel.cn/api/anthropic"
+              }
+            }
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
           # Optional: Customize the trigger phrase (default: @claude)
