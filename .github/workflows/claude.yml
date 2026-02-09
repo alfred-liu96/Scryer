@@ -43,7 +43,8 @@ jobs:
               }
             }
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_args: |
+            --allowedTools "mcp__github__create_issue"
 
           # 设置 prompt
           # prompt: "请使用中文回答"
