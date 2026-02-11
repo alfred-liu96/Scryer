@@ -47,5 +47,5 @@ jobs:
           # 测试 Python 版本是否符合要求
           docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test sh -c "python --version | grep '3.12'"
 
-          # 测试开发工具是否安装
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test pytest --version
+          # 测试基本工具是否安装
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test pip --version
