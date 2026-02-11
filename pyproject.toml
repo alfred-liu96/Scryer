@@ -8,6 +8,8 @@ dependencies = []
 [project.optional-dependencies]
 dev = [
     "pytest==9.0.2",
+    "pytest-cov==6.0.0",
+    "pip-audit==2.8.0",
     "black==24.10.0",
     "isort==5.13.2",
     "mypy==1.14.1",
@@ -29,3 +31,10 @@ check_untyped_defs = true
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers"
