@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import tomli  # Python 3.11+ 内置,无需额外安装
-import yaml  # 需要添加到依赖
+import tomllib  # Python 3.11+ 内置
+import yaml  # 通过 pyyaml 提供
 
 
 class TestPyprojectToml:
@@ -23,7 +23,7 @@ class TestPyprojectToml:
     def pyproject_content(self, pyproject_path: Path) -> dict[str, Any]:
         """读取 pyproject.toml 内容"""
         with open(pyproject_path, "rb") as f:
-            return tomli.load(f)
+            return tomllib.load(f)
 
     def test_black_dependency_exists(self, pyproject_content: dict[str, Any]) -> None:
         """验证 Black 依赖已添加到 dev dependencies"""
