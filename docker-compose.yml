@@ -1,0 +1,29 @@
+version: "3.8"
+
+services:
+  scryer-dev:
+    container_name: scryer-dev
+    image: scryer:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # 源代码绑定挂载，支持热重载
+      - .:/app
+      # 虚拟环境使用命名卷，避免每次重建
+      - scryer-dev-venv:/app/.venv
+    ports:
+      - "8000:8000"
+    networks:
+      - scryer-network
+    tty: true
+    stdin_open: true
+
+volumes:
+  scryer-dev-venv:
+    driver: local
+
+networks:
+  scryer-network:
+    driver: bridge
