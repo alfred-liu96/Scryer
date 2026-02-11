@@ -1,0 +1,59 @@
+name: Python Production CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  security-scan:
+    name: 🕵️ Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 重要：Gitleaks 需要读取 Git 历史
+
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 遇到泄露直接报错退出
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
+          GITLEAKS_ENABLE_SUMMARY: true
+
+  quality-gate:
+    name: 🐍 Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' # 根据你的项目调整版本
+          cache: 'pip' # 开启 pip 缓存，加速依赖安装
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]"
+
+      - name: Lint with flake8
+        # E501 忽略行过长，根据团队规范调整
+        run: |
+          # 停止构建如果存在语法错误或未定义的名称
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # 将其视为警告
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Run Tests
+        run: pytest
