@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      packages: read  # 仅读取权限，不推送镜像
 
     steps:
       - name: Checkout code
@@ -33,11 +33,11 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          push: false
+          push: false  # 不推送镜像，仅构建测试
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          load: true  # 加载到本地以便后续测试
+          load: true  # 加载到本地以便测试
 
       - name: Test Docker image
         run: |
@@ -47,19 +47,5 @@ jobs:
           # 测试 Python 版本是否符合要求
           docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test sh -c "python --version | grep '3.12'"
 
-      # 可选：在 PR 时推送测试镜像（需要写入权限）
-      - name: Log in to Container Registry (for PR)
-        if: github.event_name == 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Push test image (for PR)
-        if: github.event_name == 'pull_request'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}
+          # 测试开发工具是否安装
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test pytest --version
