@@ -345,7 +345,8 @@ class TestUserEdgeCases:
         """测试 email 可以是 255 个字符"""
         user = User()
         # 有效的邮箱格式但很长
-        local_part = "a" * 240
+        # "@example.com" 占用 12 个字符，所以 local_part 需要占 243 个字符
+        local_part = "a" * 243
         user.email = f"{local_part}@example.com"
         assert len(user.email) == 255
 

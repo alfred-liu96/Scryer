@@ -438,9 +438,10 @@ class TestModelRelationshipConfiguration:
         mapper = inspect(Query)
         relationship = mapper.relationships["search_results"]
         # 验证 cascade 配置
-        # 应该包含 all, delete-orphan
+        # SQLAlchemy 2.0 将 'all, delete-orphan' 展开为具体的操作列表
         cascade = relationship.cascade
-        assert "all" in cascade
+        # 验证包含 delete 和 delete-orphan（这是 'all, delete-orphan' 的展开结果）
+        assert "delete" in cascade
         assert "delete-orphan" in cascade
 
 
