@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.config import get_settings
+from .core.logger import setup_logging, get_logger
 from .schemas.health import HealthCheckResponse
 
 # 全局应用实例缓存
@@ -27,10 +28,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Args:
         app: FastAPI 应用实例
     """
+    settings = get_settings()
+
     # 启动时执行
-    print("Application starting up...")
+    # 初始化日志系统
+    setup_logging(
+        log_level=settings.log_level,
+        log_file=settings.log_file,
+        environment=settings.environment,
+        max_bytes=settings.log_max_bytes,
+        backup_count=settings.log_backup_count,
+    )
+
+    logger = get_logger(__name__)
+    logger.info(f"Application starting up... environment={settings.environment}")
+
     yield
+
     # 关闭时执行
+    logger.info("Application shutting down...")
     print("Application shutting down...")
 
 
@@ -51,6 +67,10 @@ def create_app() -> FastAPI:
         debug=settings.debug,
         lifespan=lifespan,
     )
+
+    # 注册 RequestID 中间件（必须在其他中间件之前）
+    from .middleware.request_id import RequestIDMiddleware
+    app.add_middleware(RequestIDMiddleware)
 
     # 配置 CORS 中间件
     app.add_middleware(
