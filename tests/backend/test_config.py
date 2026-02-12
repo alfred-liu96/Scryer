@@ -18,7 +18,7 @@ from pydantic import ValidationError
 
 # 这些导入在当前阶段会失败，因为实现代码尚未存在
 # 这正是 TDD 的 "Red First" 原则
-from src.backend.app.core.config import Settings, get_settings
+from backend.app.core.config import Settings, get_settings
 
 
 class TestSettingsModel:

@@ -19,7 +19,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 # 这些导入在当前阶段会失败，因为实现代码尚未存在
-from src.backend.app.core.logger import get_logger, setup_logging
+from backend.app.core.logger import get_logger, setup_logging
 
 
 class TestSetupLogging:
