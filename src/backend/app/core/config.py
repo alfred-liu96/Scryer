@@ -59,6 +59,22 @@ class Settings(BaseSettings):
         default="INFO",
         description="日志级别"
     )
+    log_file: str | None = Field(
+        default=None,
+        description="日志文件路径（可选）"
+    )
+    log_max_bytes: int = Field(
+        default=10485760,  # 10MB
+        description="单个日志文件最大字节数"
+    )
+    log_backup_count: int = Field(
+        default=5,
+        description="保留的日志备份文件数量"
+    )
+    log_format_json: bool = Field(
+        default=True,
+        description="是否使用 JSON 格式输出日志"
+    )
 
     # 路径配置
     base_dir: str = Field(default=str(Path(__file__).resolve().parent.parent.parent), description="项目根目录")

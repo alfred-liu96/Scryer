@@ -8,7 +8,10 @@ API 依赖注入模块
 import logging
 from typing import AsyncGenerator
 
+import structlog
+
 from ..core.config import get_settings
+from ..core.logger import get_logger
 
 
 # 全局日志器实例
@@ -36,20 +39,23 @@ def get_logger() -> logging.Logger:
     """
     global _logger
     if _logger is None:
-        _logger = logging.getLogger("scryer")
-
-        # 如果没有配置处理器，添加基本配置
-        if not _logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            handler.setFormatter(formatter)
-            _logger.addHandler(handler)
-            _logger.setLevel(logging.INFO)
-            _logger.propagate = False
+        # 导入 logger 模块中的 get_logger 函数并使用
+        # 注意：为了向后兼容，使用 "scryer" 作为 logger 名称
+        from ..core.logger import get_logger as core_get_logger
+        _logger = core_get_logger("scryer")
 
     return _logger
+
+
+def get_structlog_logger():
+    """获取 structlog 日志器依赖
+
+    返回应用 structlog 日志器实例
+
+    Returns:
+        structlog 日志器实例
+    """
+    return structlog.get_logger()
 
 
 async def get_db_session() -> AsyncGenerator:
@@ -100,3 +106,21 @@ def get_current_user_id() -> str | None:
     # TODO: 实现真实的用户认证逻辑
     # 当前阶段返回 None，表示未认证
     return None
+
+
+def get_request_id(request) -> str:
+    """获取请求 ID 依赖
+
+    从请求状态中提取当前请求的唯一标识符
+
+    Args:
+        request: FastAPI 请求对象
+
+    Returns:
+        str: 请求 ID，如果中间件未运行则返回空字符串
+
+    Note:
+        需要 RequestIDMiddleware 中间件运行
+    """
+    from ..middleware.request_id import get_request_id as _get_request_id
+    return _get_request_id(request)
