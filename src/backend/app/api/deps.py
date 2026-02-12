@@ -8,7 +8,7 @@ API 依赖注入模块
 import logging
 from typing import AsyncGenerator
 
-from ...core.config import get_settings
+from ..core.config import get_settings
 
 
 # 全局日志器实例
