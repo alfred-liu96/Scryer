@@ -31,8 +31,38 @@ class Settings(BaseSettings):
 
     # 数据库配置
     database_url: str = Field(
-        default="postgresql://user:password@localhost:5432/scryer",
+        default="postgresql+asyncpg://user:password@localhost:5432/scryer",
         description="数据库连接 URL"
+    )
+    db_pool_size: int = Field(
+        default=5,
+        ge=1,
+        le=100,
+        description="连接池大小"
+    )
+    db_max_overflow: int = Field(
+        default=10,
+        ge=0,
+        le=100,
+        description="最大溢出连接数"
+    )
+    db_pool_timeout: int = Field(
+        default=30,
+        ge=1,
+        description="连接超时时间（秒）"
+    )
+    db_pool_recycle: int = Field(
+        default=3600,
+        ge=-1,
+        description="连接回收时间（秒），-1 表示不回收"
+    )
+    db_echo_pool: bool = Field(
+        default=False,
+        description="是否记录连接池日志"
+    )
+    db_echo: bool = Field(
+        default=False,
+        description="是否记录 SQL 日志"
     )
 
     # Redis 配置
@@ -96,6 +126,16 @@ class Settings(BaseSettings):
         if v.upper() not in valid_levels:
             raise ValueError(f"log_level must be one of {valid_levels}")
         return v.upper()
+
+    @field_validator("database_url")
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        """验证数据库 URL 使用 asyncpg 驱动"""
+        if not v.startswith("postgresql+asyncpg://"):
+            raise ValueError(
+                "database_url must use asyncpg driver (format: postgresql+asyncpg://...)"
+            )
+        return v
 
     @field_validator("debug", mode="before")
     @classmethod
