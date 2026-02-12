@@ -209,10 +209,10 @@ class TestExceptionHandler:
 
         @app.get("/test")
         async def test_endpoint():
-            # 模拟一个验证错误
+            # 模拟一个验证错误 (Pydantic v2 使用 "missing" 而不是 "value_error.missing")
             raise PydanticValidationError.from_exception_data(
                 "TestModel",
-                [{"loc": ("field",), "msg": "field required", "type": "value_error.missing"}],
+                [{"loc": ("field",), "msg": "field required", "type": "missing"}],
             )
 
         client = TestClient(app)
@@ -227,9 +227,10 @@ class TestExceptionHandler:
 
         @app.get("/test")
         async def test_endpoint():
+            # Pydantic v2 使用 "missing" 而不是 "value_error.missing"
             raise PydanticValidationError.from_exception_data(
                 "TestModel",
-                [{"loc": ("field",), "msg": "field required", "type": "value_error.missing"}],
+                [{"loc": ("field",), "msg": "field required", "type": "missing"}],
             )
 
         client = TestClient(app)
