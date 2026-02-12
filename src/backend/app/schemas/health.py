@@ -4,7 +4,7 @@
 定义健康检查端点的响应结构
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field
 
@@ -22,4 +22,4 @@ class HealthCheckResponse(BaseModel):
 
     status: str = Field(default="healthy", description="健康状态")
     version: str = Field(..., description="应用版本")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="检查时间戳")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="检查时间戳")
