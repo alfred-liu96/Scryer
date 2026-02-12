@@ -5,12 +5,14 @@ FastAPI 应用主入口
 """
 
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.config import get_settings
+from .schemas.health import HealthCheckResponse
 
 # 全局应用实例缓存
 _app_instance: FastAPI | None = None
@@ -70,12 +72,13 @@ def create_app() -> FastAPI:
 
     # 注册健康检查端点
     @app.get("/health")
-    async def health():
+    async def health() -> HealthCheckResponse:
         """健康检查端点"""
-        return {
-            "status": "healthy",
-            "version": settings.app_version
-        }
+        return HealthCheckResponse(
+            status="healthy",
+            version=settings.app_version,
+            timestamp=datetime.utcnow()
+        )
 
     # 注册 API 路由
     from .api.router import api_router
