@@ -17,8 +17,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 # 这些导入在当前阶段会失败，因为实现代码尚未存在
-from backend.app.main import app
-from backend.app.api.router import api_router, health_check
+from src.backend.app.main import app
+from src.backend.app.api.router import api_router, health_check
 
 
 class TestHealthCheckEndpoint:
