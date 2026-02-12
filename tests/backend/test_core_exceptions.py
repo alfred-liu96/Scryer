@@ -15,14 +15,15 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from pydantic import ValidationError
+# 测试中直接使用 Pydantic 的 ValidationError，不重命名
+from pydantic import ValidationError as PydanticValidationError
 
 
 # 这些导入在当前阶段会失败，因为实现代码尚未存在
 # 这正是 TDD 的 "Red First" 原则
 from src.backend.app.core.exceptions import (
     ScryerException,
-    ValidationException as ScryerValidationError,
+    ValidationException as ScryerValidationException,
     NotFoundError,
     ConflictError,
     UnauthorizedError,
@@ -71,19 +72,19 @@ class TestValidationError:
 
     def test_validation_error_has_correct_status_code(self):
         """测试 ValidationError 有正确的状态码"""
-        exc = ScryerValidationError("Validation failed")
+        exc = ScryerValidationException("Validation failed")
         assert exc.status_code == 422
 
     def test_validation_error_message(self):
         """测试 ValidationError 消息"""
         message = "Field validation failed"
-        exc = ScryerValidationError(message)
+        exc = ScryerValidationException(message)
         assert str(exc) == message
 
     def test_validation_error_can_include_field_name(self):
         """测试 ValidationError 可以包含字段名"""
         field = "email"
-        exc = ScryerValidationError("Invalid email", field=field)
+        exc = ScryerValidationException("Invalid email", field=field)
         assert exc.field == field
 
 
@@ -204,12 +205,12 @@ class TestExceptionHandler:
     def test_validation_exception_handler_catches_pydantic_errors(self):
         """测试验证异常处理器捕获 Pydantic 错误"""
         app = FastAPI()
-        app.add_exception_handler(ValidationError, validation_exception_handler)
+        app.add_exception_handler(PydanticValidationError, validation_exception_handler)
 
         @app.get("/test")
         async def test_endpoint():
             # 模拟一个验证错误
-            raise ValidationError.from_exception_data(
+            raise PydanticValidationError.from_exception_data(
                 "TestModel",
                 [{"loc": ("field",), "msg": "field required", "type": "value_error.missing"}],
             )
@@ -222,11 +223,11 @@ class TestExceptionHandler:
     def test_validation_exception_handler_response_format(self):
         """测试验证异常处理器响应格式"""
         app = FastAPI()
-        app.add_exception_handler(ValidationError, validation_exception_handler)
+        app.add_exception_handler(PydanticValidationError, validation_exception_handler)
 
         @app.get("/test")
         async def test_endpoint():
-            raise ValidationError.from_exception_data(
+            raise PydanticValidationError.from_exception_data(
                 "TestModel",
                 [{"loc": ("field",), "msg": "field required", "type": "value_error.missing"}],
             )
@@ -264,8 +265,8 @@ class TestRegisterExceptionHandlers:
         app = FastAPI()
         register_exception_handlers(app)
 
-        # ValidationError 应该被注册
-        assert ValidationError in app.exception_handlers
+        # PydanticValidationError 应该被注册
+        assert PydanticValidationError in app.exception_handlers
 
 
 class TestErrorResponses:
@@ -355,7 +356,7 @@ class TestErrorResponsesWithExtraData:
         @app.get("/test")
         async def test_endpoint():
             extra = {"field": "email", "value": "invalid@example.com"}
-            raise ScryerValidationError("Invalid email", extra=extra)
+            raise ScryerValidationException("Invalid email", extra=extra)
 
         client = TestClient(app)
         response = client.get("/test")
@@ -370,7 +371,7 @@ class TestErrorMessages:
 
     def test_error_message_is_user_friendly(self):
         """测试错误消息对用户友好"""
-        exc = ScryerValidationError("Email is required")
+        exc = ScryerValidationException("Email is required")
         message = str(exc)
         # 消息应该是可读的
         assert len(message) > 0
