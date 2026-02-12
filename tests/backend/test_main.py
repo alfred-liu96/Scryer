@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 # 这些导入在当前阶段会失败，因为实现代码尚未存在
-from src.backend.app.main import app, create_app, get_application
+from backend.app.main import app, create_app, get_application
 
 
 class TestCreateApp:
