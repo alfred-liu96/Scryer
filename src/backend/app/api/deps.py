@@ -9,8 +9,10 @@ import logging
 from typing import AsyncGenerator
 
 import structlog
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import get_settings
+from ..core.database import get_db_session as db_get_db_session
 from ..core.logger import get_logger
 
 
@@ -58,7 +60,7 @@ def get_structlog_logger():
     return structlog.get_logger()
 
 
-async def get_db_session() -> AsyncGenerator:
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """获取数据库会话依赖
 
     生成数据库会话并在使用后自动关闭
@@ -66,19 +68,8 @@ async def get_db_session() -> AsyncGenerator:
     Yields:
         AsyncSession: 数据库会话
     """
-    # TODO: 实现真实的数据库会话管理
-    # 当前阶段返回 None，后续集成数据库时实现
-    # from sqlalchemy.ext.asyncio import AsyncSession
-
-    # 模拟会话对象
-    session = None
-
-    try:
+    async for session in db_get_db_session():
         yield session
-    finally:
-        # 清理会话
-        if session:
-            await session.close()
 
 
 def get_db():

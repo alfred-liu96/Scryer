@@ -43,11 +43,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger = get_logger(__name__)
     logger.info(f"Application starting up... environment={settings.environment}")
 
+    # 初始化数据库
+    from .core.database import init_db
+    init_db()
+    logger.info("Database initialized")
+
     yield
 
     # 关闭时执行
     logger.info("Application shutting down...")
     print("Application shutting down...")
+
+    # 关闭数据库
+    from .core.database import close_db
+    await close_db()
+    logger.info("Database closed")
 
 
 def create_app() -> FastAPI:

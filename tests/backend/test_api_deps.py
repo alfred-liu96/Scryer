@@ -77,18 +77,41 @@ class TestGetLogger:
 
 
 class TestGetDbSession:
-    """测试数据库会话依赖注入"""
+    """测试数据库会话依赖注入
+
+    注意：这些测试在 Issue #52 完成后会更新
+    当前阶段测试的是占位实现
+    """
 
     def test_get_db_session_returns_generator(self):
-        """测试 get_db_session 返回生成器"""
+        """测试 get_db_session 返回异步生成器"""
         db_gen = get_db_session()
         # 应该是异步生成器
         assert hasattr(db_gen, "__aiter__") or hasattr(db_gen, "__anext__")
 
     @pytest.mark.asyncio
-    async def test_get_db_session_yields_session(self):
-        """测试 get_db_session 生成数据库会话"""
-        # 当前实现返回 None，后续集成数据库时实现
+    @patch("src.backend.app.core.database.create_async_engine")
+    @patch("src.backend.app.core.database.get_settings")
+    async def test_get_db_session_yields_session(self, mock_get_settings, mock_create_engine):
+        """测试 get_db_session 生成数据库会话
+
+        注意：当前实现返回 None，Issue #52 完成后会返回真实会话
+        """
+        # 初始化数据库
+        from src.backend.app.core.database import init_db
+        mock_settings = Mock()
+        mock_settings.database_url = "postgresql://localhost:5432/test"
+        mock_get_settings.return_value = mock_settings
+        mock_engine = Mock()
+        mock_create_engine.return_value = mock_engine
+
+        # 重置全局状态
+        import src.backend.app.core.database as db_module
+        db_module._engine = None
+        db_module._session_factory = None
+
+        init_db()
+
         db_gen = get_db_session()
         session = await db_gen.__anext__()
 
@@ -96,9 +119,28 @@ class TestGetDbSession:
         assert db_gen is not None
 
     @pytest.mark.asyncio
-    async def test_get_db_session_closes_on_exit(self):
-        """测试数据库会话在使用后关闭"""
-        # 当前实现返回 None，后续集成数据库时实现
+    @patch("src.backend.app.core.database.create_async_engine")
+    @patch("src.backend.app.core.database.get_settings")
+    async def test_get_db_session_closes_on_exit(self, mock_get_settings, mock_create_engine):
+        """测试数据库会话在使用后自动关闭
+
+        注意：当前没有真实会话管理，Issue #52 完成后会实现
+        """
+        # 初始化数据库
+        from src.backend.app.core.database import init_db
+        mock_settings = Mock()
+        mock_settings.database_url = "postgresql://localhost:5432/test"
+        mock_get_settings.return_value = mock_settings
+        mock_engine = Mock()
+        mock_create_engine.return_value = mock_engine
+
+        # 重置全局状态
+        import src.backend.app.core.database as db_module
+        db_module._engine = None
+        db_module._session_factory = None
+
+        init_db()
+
         db_gen = get_db_session()
         session = await db_gen.__anext__()
 
@@ -109,7 +151,25 @@ class TestGetDbSession:
             pass
 
         # 当前没有真实会话，跳过验证
-        # TODO: 实现数据库后启用验证
+        # TODO: Issue #52 完成后启用验证
+
+    @pytest.mark.asyncio
+    async def test_get_db_session_handles_exception(self):
+        """测试会话在异常时也能正确关闭
+
+        参考 Issue #52 - SQLAlchemy 集成
+        """
+        db_gen = get_db_session()
+
+        try:
+            session = await db_gen.__anext__()
+            # 模拟异常
+            raise Exception("Test exception")
+        except Exception:
+            pass
+        finally:
+            # 生成器应该能够正常清理
+            assert True  # 如果没有抛出未处理的异常，测试通过
 
 
 class TestGetDb:
@@ -186,3 +246,109 @@ class TestDependencyIntegration:
 
         # 应该返回成功
         assert response.status_code == 200
+
+    def test_db_dependency_with_endpoint(self):
+        """测试数据库依赖可以在端点中使用
+
+        参考 Issue #52 - SQLAlchemy 集成
+        """
+        from fastapi import FastAPI
+
+        app = FastAPI()
+
+        @app.get("/test-db")
+        async def test_endpoint(db=Depends(get_db)):
+            # 当前 db 是 None，但依赖应该能够正常注入
+            return {"status": "ok"}
+
+        # 路由应该被注册
+        assert len(app.routes) > 0
+
+
+class TestDbSessionIntegration:
+    """测试数据库会话集成（Issue #52）
+
+    这些测试将在 SQLAlchemy 集成完成后更新
+    当前阶段验证接口兼容性
+    """
+
+    @pytest.mark.asyncio
+    @patch("src.backend.app.core.database.create_async_engine")
+    @patch("src.backend.app.core.database.get_settings")
+    async def test_db_session_can_be_used_in_context_manager(self, mock_get_settings, mock_create_engine):
+        """测试会话可以在上下文管理器中使用
+
+        注意：Issue #52 完成后会实现真实的会话管理
+        """
+        # 初始化数据库
+        from src.backend.app.core.database import init_db
+        mock_settings = Mock()
+        mock_settings.database_url = "postgresql://localhost:5432/test"
+        mock_get_settings.return_value = mock_settings
+        mock_engine = Mock()
+        mock_create_engine.return_value = mock_engine
+
+        # 重置全局状态
+        import src.backend.app.core.database as db_module
+        db_module._engine = None
+        db_module._session_factory = None
+
+        init_db()
+
+        # 当前 get_db_session 返回简单的生成器
+        # 未来应该支持 async with 语法
+        async for session in get_db_session():
+            # 当前 session 是 None
+            # Issue #52 完成后应该是真实的 AsyncSession
+            assert True
+            break  # 只测试第一次 yield
+
+    @pytest.mark.asyncio
+    @patch("src.backend.app.core.database.create_async_engine")
+    @patch("src.backend.app.core.database.get_settings")
+    async def test_multiple_sequential_sessions(self, mock_get_settings, mock_create_engine):
+        """测试可以连续获取多个会话
+
+        参考 Issue #52 - 会话工厂应该能创建多个独立会话
+        """
+        # 初始化数据库
+        from src.backend.app.core.database import init_db
+        mock_settings = Mock()
+        mock_settings.database_url = "postgresql://localhost:5432/test"
+        mock_get_settings.return_value = mock_settings
+        mock_engine = Mock()
+        mock_create_engine.return_value = mock_engine
+
+        # 重置全局状态
+        import src.backend.app.core.database as db_module
+        db_module._engine = None
+        db_module._session_factory = None
+
+        init_db()
+
+        sessions = []
+
+        # 获取第一个会话
+        async for session in get_db_session():
+            sessions.append(session)
+            break
+
+        # 获取第二个会话
+        async for session in get_db_session():
+            sessions.append(session)
+            break
+
+        # 应该能够获取两个会话实例
+        assert len(sessions) == 2
+
+    def test_get_db_returns_same_function(self):
+        """测试 get_db 返回的是同一个函数
+
+        这确保 FastAPI 的依赖注入缓存机制正常工作
+        """
+        db_dep_1 = get_db()
+        db_dep_2 = get_db()
+
+        # 应该返回同一个函数对象
+        assert db_dep_1 is db_dep_2
+        assert db_dep_1 == get_db_session

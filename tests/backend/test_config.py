@@ -64,10 +64,18 @@ class TestSettingsModel:
 
     def test_settings_database_url_validation(self):
         """测试数据库 URL 验证"""
-        # 测试有效的数据库 URL
-        valid_url = "postgresql://user:password@localhost:5432/scryer"
+        # 测试有效的数据库 URL（必须使用 asyncpg 驱动）
+        valid_url = "postgresql+asyncpg://user:password@localhost:5432/scryer"
         settings = Settings(database_url=valid_url)
         assert settings.database_url == valid_url
+
+    def test_settings_database_url_validation_fails_without_asyncpg(self):
+        """测试数据库 URL 验证失败（不使用 asyncpg 驱动）"""
+        # 测试无效的数据库 URL（不使用 asyncpg 驱动）
+        invalid_url = "postgresql://user:password@localhost:5432/scryer"
+        with pytest.raises(ValidationError) as exc_info:
+            Settings(database_url=invalid_url)
+        assert "database_url must use asyncpg driver" in str(exc_info.value)
 
     def test_settings_redis_url_validation(self):
         """测试 Redis URL 验证"""
