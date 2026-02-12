@@ -33,9 +33,11 @@ class TestSetupLoggingSignature:
         logger = setup_logging(log_level="DEBUG")
         assert isinstance(logger, logging.Logger)
 
-    def test_accepts_log_file_param(self):
+    def test_accepts_log_file_param(self, tmp_path):
         """测试接受 log_file 参数"""
-        logger = setup_logging(log_file="/tmp/test.log")
+        # 使用 tmp_path fixture 避免权限问题
+        log_file = tmp_path / "test.log"
+        logger = setup_logging(log_file=str(log_file))
         assert isinstance(logger, logging.Logger)
 
 

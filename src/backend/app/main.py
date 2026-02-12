@@ -5,7 +5,7 @@ FastAPI 应用主入口
 """
 
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
@@ -77,7 +77,7 @@ def create_app() -> FastAPI:
         return HealthCheckResponse(
             status="healthy",
             version=settings.app_version,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.now(timezone.utc)
         )
 
     # 注册 API 路由

@@ -4,7 +4,7 @@ API 路由主模块
 聚合所有 API 路由
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter
 
@@ -23,7 +23,7 @@ async def health_check() -> HealthCheckResponse:
     return HealthCheckResponse(
         status="healthy",
         version=settings.app_version,
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
