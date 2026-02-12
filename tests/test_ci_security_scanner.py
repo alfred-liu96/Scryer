@@ -335,7 +335,8 @@ class TestSecurityScannerGenerateSummary:
         summary = scanner.generate_summary(result)
 
         assert "0" in summary
-        assert ("no" in summary.lower() or "无" in summary or "safe" in summary.lower())
+        # 使用括号确保逻辑正确
+        assert ("no" in summary.lower()) or ("无" in summary) or ("safe" in summary.lower())
 
     def test_generate_summary_includes_severity_breakdown(self) -> None:
         """验证摘要包含严重级别统计"""
