@@ -13,8 +13,7 @@
 
 from typing import Any
 
-import pytest
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
@@ -23,7 +22,7 @@ from pydantic import ValidationError
 # 这正是 TDD 的 "Red First" 原则
 from src.backend.app.core.exceptions import (
     ScryerException,
-    ValidationError as ScryerValidationError,
+    ValidationException as ScryerValidationError,
     NotFoundError,
     ConflictError,
     UnauthorizedError,

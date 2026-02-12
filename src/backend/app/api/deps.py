@@ -62,7 +62,7 @@ async def get_db_session() -> AsyncGenerator:
     """
     # TODO: 实现真实的数据库会话管理
     # 当前阶段返回 None，后续集成数据库时实现
-    from sqlalchemy.ext.asyncio import AsyncSession
+    # from sqlalchemy.ext.asyncio import AsyncSession
 
     # 模拟会话对象
     session = None

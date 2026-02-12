@@ -6,7 +6,7 @@
 
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 # 定义泛型类型变量

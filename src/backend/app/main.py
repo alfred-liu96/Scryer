@@ -10,7 +10,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .core.config import get_settings, Settings
+from .core.config import get_settings
 
 # 全局应用实例缓存
 _app_instance: FastAPI | None = None

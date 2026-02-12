@@ -38,7 +38,7 @@ class ScryerException(Exception):
         return self.detail
 
 
-class ValidationError(ScryerException):
+class ValidationException(ScryerException):
     """验证错误异常
 
     用于请求数据验证失败的情况
