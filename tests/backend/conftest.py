@@ -5,11 +5,19 @@ Backend test fixtures and configuration
 """
 
 import os
+import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+
+# 添加 src/backend 到 Python 路径，使测试能正确导入模块
+# pytest pythonpath = ["src"] 会将 src 添加到路径
+# 但需要进一步配置才能找到 backend.app 模块
+_backend_path = Path(__file__).parent.parent.parent / "src" / "backend"
+if str(_backend_path) not in sys.path:
+    sys.path.insert(0, str(_backend_path))
 
 
 @pytest.fixture
