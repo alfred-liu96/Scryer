@@ -68,6 +68,15 @@ def create_app() -> FastAPI:
             "version": settings.app_version
         }
 
+    # 注册健康检查端点
+    @app.get("/health")
+    async def health():
+        """健康检查端点"""
+        return {
+            "status": "healthy",
+            "version": settings.app_version
+        }
+
     # 注册 API 路由
     from .api.router import api_router
     app.include_router(api_router, prefix=settings.api_prefix)
