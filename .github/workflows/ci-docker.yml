@@ -1,0 +1,51 @@
+name: Docker Build and Validation
+
+on:
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: ["main"]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/scryer  # 小写仓库名
+
+jobs:
+  docker-build-test:
+    name: 🐳 Docker Build & Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read  # 仅读取权限，不推送镜像
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false  # 不推送镜像，仅构建测试
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          load: true  # 加载到本地以便测试
+
+      - name: Test Docker image
+        run: |
+          # 运行基本容器测试
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test python --version
+
+          # 测试 Python 版本是否符合要求
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test sh -c "python --version | grep '3.12'"
+
+          # 测试基本工具是否安装
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test pip --version

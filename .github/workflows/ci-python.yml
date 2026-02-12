@@ -55,5 +55,16 @@ jobs:
           # 将其视为警告
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-      - name: Run Tests
-        run: pytest
+      - name: Run Tests with Coverage
+        run: |
+          pytest --cov=src --cov-report=xml --cov-report=term-missing
+          # 检查覆盖率是否达到最低标准（可选）
+          # coverage report --fail-under=80
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false

@@ -1,0 +1,110 @@
+name: Dependency Security Scan
+
+on:
+  push:
+    branches: ["main"]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: ["main"]
+  schedule:
+    # 每周一上午 10 点运行（UTC）
+    - cron: '0 10 * * 1'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  pip-audit:
+    name: 🔍 Dependency Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]"
+          # 安装 pip-audit
+          pip install pip-audit
+
+      - name: Run pip-audit
+        run: |
+          # 检查依赖中的已知漏洞
+          pip-audit --desc --format json > audit-report.json || true
+
+          # 输出可读的报告
+          pip-audit --desc
+
+      - name: Parse audit report with our tool
+        run: |
+          python -c "
+          from src.ci.security_scanner import SecurityScanner
+          scanner = SecurityScanner()
+          result = scanner.parse_audit_report('audit-report.json')
+          print(scanner.generate_summary(result))
+          "
+
+      - name: Upload audit report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-report
+          path: audit-report.json
+          retention-days: 30
+
+      - name: Check for vulnerabilities
+        run: |
+          python -c "
+          import json
+          import sys
+
+          with open('audit-report.json') as f:
+              data = json.load(f)
+
+          vulns = data.get('vulnerabilities', [])
+          if vulns:
+              print(f'Found {len(vulns)} vulnerabilities:')
+              for vuln in vulns:
+                  severity = vuln.get('severity', 'UNKNOWN')
+                  name = vuln.get('name', 'UNKNOWN')
+                  pkg = vuln.get('affected_package', 'unknown')
+                  print(f'  - [{severity}] {name} in {pkg}')
+
+              # 如果发现严重或高危漏洞，退出码非零
+              critical_or_high = [
+                  v for v in vulns
+                  if v.get('severity', '') in ['HIGH', 'CRITICAL']
+              ]
+              if critical_or_high:
+                  print(f'\\nFound {len(critical_or_high)} HIGH/CRITICAL vulnerabilities!')
+                  sys.exit(1)
+          "
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const data = JSON.parse(fs.readFileSync('audit-report.json', 'utf8'));
+            const vulns = data.vulnerabilities || [];
+
+            if (vulns.length > 0) {
+              const body = `## 🔍 Dependency Security Scan Results\n\nFound **${vulns.length}** vulnerabilities:\n\n${
+                vulns.map(v => `- **${v.name}** (${v.severity}): ${v.affected_package} ${v.installed_version}`).join('\n')
+              }\n\nPlease review and update dependencies.`;
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
