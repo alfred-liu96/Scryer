@@ -59,15 +59,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # 注册健康检查路由
-    @app.get("/health")
-    async def health_check():
-        """健康检查端点"""
-        return {
-            "status": "ok",
-            "version": settings.app_version
-        }
-
     # 注册根端点
     @app.get("/")
     async def root():
@@ -78,7 +69,7 @@ def create_app() -> FastAPI:
         }
 
     # 注册 API 路由
-    from .api.router import router as api_router
+    from .api.router import api_router
     app.include_router(api_router, prefix=settings.api_prefix)
 
     return app
