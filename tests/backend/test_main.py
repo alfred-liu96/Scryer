@@ -18,7 +18,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 # 这些导入在当前阶段会失败，因为实现代码尚未存在
-from backend.app.main import app, create_app, get_application
+from src.backend.app.main import app, create_app, get_application
 
 
 class TestCreateApp:
@@ -112,7 +112,7 @@ class TestHealthEndpoint:
 
     def test_health_endpoint_returns_200(self):
         """测试健康检查端点返回 200"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
         response = client.get("/health")
@@ -121,7 +121,7 @@ class TestHealthEndpoint:
 
     def test_health_endpoint_returns_json(self):
         """测试健康检查端点返回 JSON"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
         response = client.get("/health")
@@ -130,7 +130,7 @@ class TestHealthEndpoint:
 
     def test_health_endpoint_response_structure(self):
         """测试健康检查端点响应结构"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
         response = client.get("/health")
@@ -141,7 +141,7 @@ class TestHealthEndpoint:
 
     def test_health_endpoint_includes_version(self):
         """测试健康检查端点包含版本信息"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
         response = client.get("/health")
@@ -156,7 +156,7 @@ class TestRootEndpoint:
 
     def test_root_endpoint_exists(self):
         """测试根端点存在"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
         response = client.get("/")
@@ -166,7 +166,7 @@ class TestRootEndpoint:
 
     def test_root_endpoint_welcome_message(self):
         """测试根端点返回欢迎信息"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
         response = client.get("/")
@@ -182,7 +182,7 @@ class TestAPIRoutes:
 
     def test_api_routes_prefix(self):
         """测试 API 路由使用正确的前缀"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         routes = [route.path for route in app.routes if hasattr(route, "path")]
         # 应该有 /api 前缀的路由
@@ -191,7 +191,7 @@ class TestAPIRoutes:
 
     def test_api_routes_registered(self):
         """测试 API 路由被正确注册"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         # 应该有路由被注册
         assert len(app.routes) > 0
@@ -202,7 +202,7 @@ class TestMiddleware:
 
     def test_cors_middleware_allows_origins(self):
         """测试 CORS 中间件允许的源"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
 
@@ -220,7 +220,7 @@ class TestMiddleware:
 
     def test_middleware_execution_order(self):
         """测试中间件执行顺序"""
-        from backend.app.main import create_app
+        from src.backend.app.main import create_app
 
         app = create_app()
         # 中间件应该被注册
@@ -232,7 +232,7 @@ class TestLifecycleEvents:
 
     def test_startup_event_handler_exists(self):
         """测试应用有启动事件处理器"""
-        from backend.app.main import create_app
+        from src.backend.app.main import create_app
 
         app = create_app()
         # 应该有启动事件
@@ -240,7 +240,7 @@ class TestLifecycleEvents:
 
     def test_shutdown_event_handler_exists(self):
         """测试应用有关闭事件处理器"""
-        from backend.app.main import create_app
+        from src.backend.app.main import create_app
 
         app = create_app()
         # 应该有关闭事件
@@ -252,7 +252,7 @@ class TestErrorHandlers:
 
     def test_404_handler(self):
         """测试 404 错误处理器"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
         response = client.get("/nonexistent-route")
@@ -261,7 +261,7 @@ class TestErrorHandlers:
 
     def test_404_returns_json(self):
         """测试 404 返回 JSON"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
         response = client.get("/nonexistent-route")
@@ -270,7 +270,7 @@ class TestErrorHandlers:
 
     def test_validation_error_handler(self):
         """测试验证错误处理器"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
         # 发送无效的请求，应该触发验证错误
@@ -286,7 +286,7 @@ class TestAppModules:
     @patch("backend.app.main.include_router")
     def test_includes_api_router(self, mock_include_router):
         """测试应用包含 API 路由"""
-        from backend.app.main import create_app
+        from src.backend.app.main import create_app
 
         app = create_app()
         # API router 应该被包含
@@ -294,7 +294,7 @@ class TestAppModules:
 
     def test_registers_error_handlers(self):
         """测试应用注册了错误处理器"""
-        from backend.app.main import create_app
+        from src.backend.app.main import create_app
 
         app = create_app()
         # 应该有错误处理器
@@ -331,7 +331,7 @@ class TestAppDependencyInjection:
 
     def test_config_dependency(self):
         """测试配置依赖注入"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         # 应该有配置依赖可以注入
         # 具体实现取决于如何设计依赖注入
@@ -339,7 +339,7 @@ class TestAppDependencyInjection:
 
     def test_logger_dependency(self):
         """测试日志依赖注入"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         # 应该有日志依赖可以注入
         assert hasattr(app, "dependencies") or hasattr(app, "router")
@@ -350,7 +350,7 @@ class TestAppSecurity:
 
     def test_security_headers(self):
         """测试安全头"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
         response = client.get("/")
@@ -364,7 +364,7 @@ class TestAppSecurity:
 
     def test_no_sensitive_data_in_errors(self):
         """测试错误中不包含敏感数据"""
-        from backend.app.main import app
+        from src.backend.app.main import app
 
         client = TestClient(app)
         response = client.get("/nonexistent-route")
