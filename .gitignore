@@ -209,3 +209,19 @@ __marimo__/
 .idea/
 .claude/
 .python-version
+
+# Development temporary files
+# Pytest temporary files
+pytest-of-*/
+# Verification and testing scripts
+verify_*.py
+run_*.sh
+# CI/CD temporary scripts
+wait-ci.sh
+# Implementation reports
+IMPLEMENTATION_*.md
+VERIFICATION_*.md
+# Temporary scripts
+*.tmp
+*.bak
+
