@@ -4,7 +4,12 @@ API 路由主模块
 聚合所有 API 路由
 """
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter
+
+from ..core.config import get_settings
+from ..schemas.health import HealthCheckResponse
 
 # 创建主路由器
 api_router = APIRouter()
@@ -12,9 +17,14 @@ api_router = APIRouter()
 
 # 健康检查端点
 @api_router.get("/health")
-async def health_check():
+async def health_check() -> HealthCheckResponse:
     """健康检查端点"""
-    return {"status": "healthy"}
+    settings = get_settings()
+    return HealthCheckResponse(
+        status="healthy",
+        version=settings.app_version,
+        timestamp=datetime.now(timezone.utc)
+    )
 
 
 # 示例路由

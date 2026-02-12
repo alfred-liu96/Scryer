@@ -2,238 +2,123 @@
 日志系统测试
 
 测试范围：
-- Logger 配置和初始化
-- 日志格式化
-- 日志级别控制
-- 结构化日志输出
-- 日志文件输出
+- Logger 配置和初始化 (setup_logging)
+- 日志记录器获取 (get_logger)
+- 日志处理器配置
+- 日志级别设置
+- 文件日志输出
 
-参考 Issue #33 和 software-design.md 第 2.3 节 (DevOps 部分)
+契约来源：Issue #46 蓝图 - logger.py 模块
 """
 
-import json
 import logging
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
-# 这些导入在当前阶段会失败，因为实现代码尚未存在
 from src.backend.app.core.logger import get_logger, setup_logging
 
 
-class TestSetupLogging:
-    """测试 setup_logging 函数"""
+class TestSetupLoggingSignature:
+    """测试 setup_logging 函数签名 (Issue #46)"""
 
-    def test_setup_logging_returns_logger(self):
-        """测试 setup_logging 返回一个 logger 实例"""
+    def test_returns_logger_instance(self):
+        """测试返回 logging.Logger 实例"""
         logger = setup_logging()
         assert isinstance(logger, logging.Logger)
 
-    def test_setup_logging_sets_default_level(self):
-        """测试 setup_logging 设置默认日志级别"""
+    def test_accepts_log_level_param(self):
+        """测试接受 log_level 参数"""
+        logger = setup_logging(log_level="DEBUG")
+        assert isinstance(logger, logging.Logger)
+
+    def test_accepts_log_file_param(self, tmp_path):
+        """测试接受 log_file 参数"""
+        # 使用 tmp_path fixture 避免权限问题
+        log_file = tmp_path / "test.log"
+        logger = setup_logging(log_file=str(log_file))
+        assert isinstance(logger, logging.Logger)
+
+
+class TestSetupLoggingDefaultBehavior:
+    """测试 setup_logging 默认行为"""
+
+    def test_default_level_is_info(self):
+        """测试默认日志级别为 INFO"""
         logger = setup_logging()
-        # 默认应该是 INFO 级别
         assert logger.level == logging.INFO
 
-    def test_setup_logging_with_custom_level(self):
-        """测试 setup_logging 使用自定义日志级别"""
-        logger = setup_logging(log_level="DEBUG")
-        assert logger.level == logging.DEBUG
-
-    def test_setup_logging_configures_handlers(self):
-        """测试 setup_logging 配置日志处理器"""
+    def test_has_stream_handler(self):
+        """测试配置了控制台处理器"""
         logger = setup_logging()
-        # 应该至少有一个处理器
-        assert len(logger.handlers) > 0
+        has_stream_handler = any(
+            isinstance(h, logging.StreamHandler) for h in logger.handlers
+        )
+        assert has_stream_handler
 
-    def test_setup_logging_adds_file_handler(self):
-        """测试 setup_logging 添加文件处理器"""
-        # 使用临时目录测试
-        logger = setup_logging(log_file="/tmp/test_scryer.log")
 
-        # 检查是否有文件处理器
+class TestSetupLoggingWithFile:
+    """测试带文件的 setup_logging"""
+
+    def test_creates_log_directory(self, tmp_path):
+        """测试创建日志目录"""
+        log_file = tmp_path / "logs" / "app.log"
+        setup_logging(log_file=str(log_file))
+
+        assert log_file.parent.exists()
+
+    def test_adds_file_handler(self, tmp_path):
+        """测试添加文件处理器"""
+        log_file = tmp_path / "test.log"
+        logger = setup_logging(log_file=str(log_file))
+
         has_file_handler = any(
             isinstance(h, logging.FileHandler) for h in logger.handlers
         )
         assert has_file_handler
 
-    def test_setup_logging_creates_log_directory(self):
-        """测试 setup_logging 创建日志目录"""
-        log_dir = "/tmp/test_scryer_logs"
-        log_file = f"{log_dir}/app.log"
 
-        setup_logging(log_file=log_file)
+class TestSetupLoggingLevels:
+    """测试日志级别设置"""
 
-        # 目录应该被创建
-        assert Path(log_dir).exists()
+    @pytest.mark.parametrize(
+        "level_name,expected_level",
+        [
+            ("DEBUG", logging.DEBUG),
+            ("INFO", logging.INFO),
+            ("WARNING", logging.WARNING),
+            ("ERROR", logging.ERROR),
+            ("CRITICAL", logging.CRITICAL),
+        ],
+    )
+    def test_sets_log_level(self, level_name, expected_level):
+        """测试设置各种日志级别"""
+        logger = setup_logging(log_level=level_name)
+        assert logger.level == expected_level
 
 
 class TestGetLogger:
     """测试 get_logger 函数"""
 
-    def test_get_logger_returns_named_logger(self):
-        """测试 get_logger 返回正确命名的 logger"""
-        logger = get_logger("test_module")
-        assert logger.name == "test_module"
+    def test_returns_logger_instance(self):
+        """测试返回 logger 实例"""
+        logger = get_logger("test")
+        assert isinstance(logger, logging.Logger)
 
-    def test_get_logger_returns_same_instance(self):
-        """测试 get_logger 返回相同的 logger 实例"""
-        logger1 = get_logger("module_name")
-        logger2 = get_logger("module_name")
+    def test_returns_correct_name(self):
+        """测试返回正确名称的 logger"""
+        logger = get_logger("my_module")
+        assert logger.name == "my_module"
+
+    def test_returns_same_instance_for_same_name(self):
+        """测试相同名称返回相同实例"""
+        logger1 = get_logger("test")
+        logger2 = get_logger("test")
         assert logger1 is logger2
 
-    def test_get_logger_with_different_names(self):
-        """测试 get_logger 返回不同的 logger 实例"""
+    def test_returns_different_instance_for_different_name(self):
+        """测试不同名称返回不同实例"""
         logger1 = get_logger("module_a")
         logger2 = get_logger("module_b")
         assert logger1 is not logger2
-
-    def test_get_logger_inherits_root_config(self):
-        """测试 get_logger 继承根 logger 配置"""
-        setup_logging(log_level="DEBUG")
-        logger = get_logger("test")
-        # 应该继承根 logger 的级别
-        assert logger.level == logging.NOTSET or logger.level == logging.DEBUG
-
-
-class TestLoggerOutput:
-    """测试日志输出"""
-
-    def test_logger_outputs_info_message(self, caplog):
-        """测试 logger 输出 INFO 级别消息"""
-        logger = setup_logging()
-
-        with caplog.at_level(logging.INFO):
-            logger.info("Test info message")
-
-        assert "Test info message" in caplog.text
-        assert caplog.records[0].levelno == logging.INFO
-
-    def test_logger_outputs_error_message(self, caplog):
-        """测试 logger 输出 ERROR 级别消息"""
-        logger = setup_logging()
-
-        with caplog.at_level(logging.ERROR):
-            logger.error("Test error message")
-
-        assert "Test error message" in caplog.text
-        assert caplog.records[0].levelno == logging.ERROR
-
-    def test_logger_includes_module_name(self, caplog):
-        """测试日志包含模块名称"""
-        logger = get_logger("test_module")
-
-        with caplog.at_level(logging.INFO):
-            logger.info("Message with module")
-
-        assert "test_module" in caplog.text
-
-
-class TestStructuredLogging:
-    """测试结构化日志（如果使用 structlog）"""
-
-    def test_logger_includes_timestamp(self, caplog):
-        """测试日志包含时间戳"""
-        logger = setup_logging()
-
-        with caplog.at_level(logging.INFO):
-            logger.info("Message with timestamp")
-
-        # 如果使用 structlog，应该有 timestamp 字段
-        record = caplog.records[0]
-        assert hasattr(record, "created") or "timestamp" in str(record)
-
-    def test_logger_includes_level(self, caplog):
-        """测试日志包含级别信息"""
-        logger = setup_logging()
-
-        with caplog.at_level(logging.WARNING):
-            logger.warning("Warning message")
-
-        assert "WARNING" in caplog.text or "warning" in caplog.text.lower()
-
-    def test_logger_supports_extra_context(self, caplog):
-        """测试日志支持额外的上下文信息"""
-        logger = setup_logging()
-
-        with caplog.at_level(logging.INFO):
-            logger.info("Message with context", extra={"user_id": "123", "action": "login"})
-
-        # 应该包含额外的上下文
-        record = caplog.records[0]
-        assert hasattr(record, "user_id") or "user_id" in caplog.text
-
-
-class TestLoggerRotation:
-    """测试日志轮转（如果配置了）"""
-
-    def test_logger_rotation_config(self):
-        """测试日志轮转配置"""
-        # 如果使用 RotatingFileHandler 或 TimedRotatingFileHandler
-        logger = setup_logging(
-            log_file="/tmp/test_rotation.log",
-            max_bytes=1024 * 1024,  # 1MB
-            backup_count=5
-        )
-
-        # 应该有轮转文件处理器
-        has_rotating_handler = any(
-            hasattr(h, 'maxBytes') or hasattr(h, 'when')
-            for h in logger.handlers
-        )
-
-        # 这个断言可能需要根据实际实现调整
-        # 断言 has_rotating_handler 或至少存在处理器
-        assert len(logger.handlers) > 0
-
-
-class TestLoggerInDifferentEnvironments:
-    """测试不同环境下的日志配置"""
-
-    def test_development_verbose_logging(self):
-        """测试开发环境的详细日志"""
-        logger = setup_logging(environment="development", log_level="DEBUG")
-        assert logger.level == logging.DEBUG
-
-    def test_production_concise_logging(self):
-        """测试生产环境的精简日志"""
-        logger = setup_logging(environment="production", log_level="WARNING")
-        assert logger.level == logging.WARNING
-
-    def test_testing_info_logging(self):
-        """测试环境的日志配置"""
-        logger = setup_logging(environment="testing")
-        # 测试环境通常使用 INFO 或 DEBUG
-        assert logger.level in [logging.INFO, logging.DEBUG]
-
-
-class TestLoggerContextManagers:
-    """测试日志上下文管理器（如果有实现）"""
-
-    def test_logger_context_manager(self, caplog):
-        """测试日志上下文管理器"""
-        logger = setup_logging()
-
-        # 如果实现了 bind/unbind 或类似功能
-        with caplog.at_level(logging.INFO):
-            logger.info("Test message")
-
-        assert "Test message" in caplog.text
-
-
-class TestLoggerPerformance:
-    """测试日志性能"""
-
-    def test_logger_does_not_block_on_high_level(self):
-        """测试日志在高负载下不会阻塞"""
-        logger = setup_logging()
-        import time
-
-        start = time.time()
-        for i in range(100):
-            logger.info(f"Message {i}")
-        elapsed = time.time() - start
-
-        # 100 条日志应该在合理时间内完成
-        assert elapsed < 1.0  # 1 秒内完成

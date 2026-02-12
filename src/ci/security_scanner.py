@@ -155,7 +155,7 @@ class SecurityScanner:
             格式化的摘要字符串
         """
         if result.total_vulnerabilities == 0:
-            return "安全扫描完成：未发现漏洞"
+            return "安全扫描完成：发现 0 个漏洞"
 
         # 统计各级别漏洞数量
         severity_counts = {

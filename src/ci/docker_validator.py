@@ -172,8 +172,9 @@ class DockerValidator:
             for tool in required_tools:
                 # 检查工具是否在安装命令中
                 # 支持多种安装方式：apt-get install, apt install, apk add
-                install_pattern = rf"(apt-get\s+install|apt\s+install|apk\s+add).*\b{re.escape(tool)}\b"
-                if not re.search(install_pattern, content, re.IGNORECASE):
+                # 使用 re.DOTALL 使 . 匹配换行符（支持反斜杠续行）
+                install_pattern = rf"(apt-get\s+install|apt\s+install|apk\s+add).*?\b{re.escape(tool)}\b"
+                if not re.search(install_pattern, content, re.IGNORECASE | re.DOTALL):
                     errors.append(f"Missing required tool: {tool}")
 
             is_valid = len(errors) == 0
