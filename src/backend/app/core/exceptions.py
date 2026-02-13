@@ -158,6 +158,82 @@ class InternalServerError(ScryerException):
         super().__init__(detail, status_code=500, extra=extra)
 
 
+class CacheConnectionError(ScryerException):
+    """缓存连接异常
+
+    用于 Redis 连接失败的情况
+
+    Attributes:
+        detail (str): 错误详情
+        extra (dict | None): 额外数据
+    """
+
+    def __init__(
+        self,
+        detail: str,
+        *,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(detail, status_code=500, extra=extra)
+
+
+class CacheSerializationError(ScryerException):
+    """缓存序列化异常
+
+    用于对象序列化为 JSON 失败的情况
+
+    Attributes:
+        detail (str): 错误详情
+        extra (dict | None): 额外数据
+    """
+
+    def __init__(
+        self,
+        detail: str,
+        *,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(detail, status_code=500, extra=extra)
+
+
+class CacheDeserializationError(ScryerException):
+    """缓存反序列化异常
+
+    用于 JSON 反序列化失败的情况
+
+    Attributes:
+        detail (str): 错误详情
+        extra (dict | None): 额外数据
+    """
+
+    def __init__(
+        self,
+        detail: str,
+        *,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(detail, status_code=500, extra=extra)
+
+
+class CacheKeyNotFoundError(ScryerException):
+    """缓存键未找到异常
+
+    用于请求的缓存键不存在的情况
+
+    Attributes:
+        detail (str): 错误详情
+        extra (dict | None): 额外数据
+    """
+
+    def __init__(
+        self,
+        detail: str,
+        *,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(detail, status_code=500, extra=extra)
+
+
 async def scryer_exception_handler(
     request: Request, exc: ScryerException
 ) -> JSONResponse:
