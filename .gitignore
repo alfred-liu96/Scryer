@@ -209,3 +209,5 @@ __marimo__/
 .idea/
 .claude/
 .python-version
+.devpod-internal/
+.devcontainer/
