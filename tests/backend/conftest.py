@@ -116,3 +116,82 @@ def reset_logging():
     for handler in root.handlers[:]:
         root.removeHandler(handler)
         handler.close()
+
+
+# ==================== Redis 相关 Fixtures ====================
+
+@pytest.fixture
+def mock_redis_pool():
+    """模拟 Redis 连接池"""
+    from unittest.mock import AsyncMock, Mock
+
+    mock_pool = Mock()
+    mock_pool.acquire = AsyncMock()
+    mock_pool.release = Mock()
+    mock_pool.disconnect = AsyncMock()
+    mock_pool.acquire.return_value = Mock()
+    return mock_pool
+
+
+@pytest.fixture
+def mock_redis_client():
+    """模拟 Redis 客户端
+
+    返回一个工厂函数，每次调用创建新的 mock 实例
+    """
+    from unittest.mock import AsyncMock, Mock
+
+    def create_mock_client():
+        """创建新的 mock 客户端"""
+        client = Mock()
+        client.get = AsyncMock(return_value=None)
+        client.set = AsyncMock(return_value=True)
+        client.setex = AsyncMock(return_value=True)
+        client.delete = AsyncMock(return_value=1)
+        client.exists = AsyncMock(return_value=0)
+        client.expire = AsyncMock(return_value=True)
+        client.ttl = AsyncMock(return_value=-1)
+        client.incrby = AsyncMock(return_value=1)
+        client.decrby = AsyncMock(return_value=-1)
+        client.mget = AsyncMock(return_value=[])
+        client.mset = AsyncMock(return_value=True)
+        client.ping = AsyncMock(return_value=True)
+        client.keys = AsyncMock(return_value=[])
+        client.scan_iter = Mock(return_value=iter([]))
+        client.close = AsyncMock(return_value=None)
+        client.aclose = AsyncMock(return_value=None)
+        return client
+
+    return create_mock_client
+
+
+@pytest.fixture(autouse=True)
+def reset_redis_globals():
+    """自动重置 Redis 全局状态（每个测试前后）"""
+    import sys
+
+    # 测试前重置
+    if "backend.app.core.redis" in sys.modules:
+        redis_module = sys.modules["backend.app.core.redis"]
+        redis_module._redis_pool = None
+        redis_module._redis_manager = None
+
+    if "backend.app.utils.decorators" in sys.modules:
+        decorators_module = sys.modules["backend.app.utils.decorators"]
+        decorators_module._cache_service = None
+
+    yield
+
+    # 测试后重置
+    if "backend.app.core.redis" in sys.modules:
+        redis_module = sys.modules["backend.app.core.redis"]
+        redis_module._redis_pool = None
+        redis_module._redis_manager = None
+
+    if "backend.app.utils.decorators" in sys.modules:
+        decorators_module = sys.modules["backend.app.utils.decorators"]
+        decorators_module._cache_service = None
+
+
+# 移除了 cache_service fixture，因为测试文件直接创建 mock 对象
+# 这样可以避免导入路径混淆和状态污染问题
