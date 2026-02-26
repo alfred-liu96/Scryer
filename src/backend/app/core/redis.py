@@ -4,9 +4,9 @@ Redis 连接管理模块
 提供 Redis 异步连接管理功能
 """
 
-from typing import AsyncGenerator
-
-from redis.asyncio import ConnectionPool as AsyncConnectionPool
+from redis.asyncio import (
+    ConnectionPool as AsyncConnectionPool,  # type: ignore[import-untyped]
+)
 from redis.asyncio import Redis as AsyncRedis
 from structlog import get_logger
 
@@ -33,15 +33,15 @@ class RedisConnectionManager:
         """
         self.redis_url = redis_url
         self.pool: AsyncConnectionPool | None = None
-        self._init_pool()
 
-    def _init_pool(self) -> None:
-        """初始化连接池"""
-        self.pool = AsyncConnectionPool.from_url(
-            self.redis_url,
-            decode_responses=True,
-        )
-        logger.info("Redis connection pool created", url=self.redis_url)
+    def _ensure_pool(self) -> None:
+        """确保连接池已初始化（延迟初始化）"""
+        if self.pool is None:
+            self.pool = AsyncConnectionPool.from_url(
+                self.redis_url,
+                decode_responses=True,
+            )
+            logger.info("Redis connection pool created", url=self.redis_url)
 
     async def get_client(self) -> AsyncRedis:
         """获取 Redis 客户端
@@ -51,10 +51,7 @@ class RedisConnectionManager:
         Returns:
             AsyncRedis: Redis 客户端实例
         """
-        if self.pool is None:
-            logger.error("Redis connection pool is not initialized")
-            raise RuntimeError("Redis connection pool is not initialized")
-
+        self._ensure_pool()
         client = AsyncRedis(connection_pool=self.pool)
         return client
 
@@ -78,7 +75,7 @@ class RedisConnectionManager:
         """
         try:
             client = await self.get_client()
-            result = await client.ping()
+            result: bool = await client.ping()  # type: ignore[no-any-return]
             return result
         except Exception as e:
             logger.error("Redis ping failed", error=str(e))
