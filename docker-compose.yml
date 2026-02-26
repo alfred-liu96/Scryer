@@ -1,6 +1,60 @@
 version: "3.8"
 
 services:
+  # =============================================================================
+  # PostgreSQL 15 服务
+  # =============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: scryer-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-scryer}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-scryer}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scryer} -d ${POSTGRES_DB:-scryer}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - scryer-network
+
+  # =============================================================================
+  # Redis 7 服务
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: scryer-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - scryer-network
+
+  # =============================================================================
+  # 后端开发服务
+  # =============================================================================
   scryer-dev:
     container_name: scryer-dev
     image: scryer:dev
@@ -15,15 +69,48 @@ services:
       - scryer-dev-venv:/app/.venv
     ports:
       - "8000:8000"
+    # 服务依赖关系：等待基础设施健康检查通过后再启动
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # 环境变量：覆盖 .env 中的连接字符串，使用 Docker 网络内部 DNS
+    environment:
+      # 覆盖 DATABASE_URL，将 localhost 替换为 postgres 服务名
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-scryer}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-scryer}
+      # 覆盖 REDIS_URL，将 localhost 替换为 redis 服务名
+      - REDIS_URL=redis://redis:6379/0
+    # 从 .env 文件加载环境变量
+    env_file:
+      - .env
     networks:
       - scryer-network
     tty: true
     stdin_open: true
 
+# =============================================================================
+# 命名卷定义（数据持久化）
+# =============================================================================
 volumes:
+  # PostgreSQL 数据卷
+  postgres_data:
+    driver: local
+    name: scryer-postgres-data
+
+  # Redis 数据卷
+  redis_data:
+    driver: local
+    name: scryer-redis-data
+
+  # 开发环境虚拟环境卷（避免每次重建）
   scryer-dev-venv:
     driver: local
 
+# =============================================================================
+# 网络定义
+# =============================================================================
 networks:
   scryer-network:
     driver: bridge
+    name: scryer-network
