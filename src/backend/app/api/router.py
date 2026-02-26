@@ -6,13 +6,12 @@ API 路由主模块
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Request, Depends
-
-import structlog
+from fastapi import APIRouter, Depends, Request
 
 from ..core.config import get_settings
+from ..core.health import check_database, check_redis
 from ..schemas.health import HealthCheckResponse
-from .deps import get_structlog_logger, get_request_id
+from .deps import get_request_id, get_structlog_logger
 
 # 创建主路由器
 api_router = APIRouter()
@@ -21,12 +20,31 @@ api_router = APIRouter()
 # 健康检查端点
 @api_router.get("/health")
 async def health_check() -> HealthCheckResponse:
-    """健康检查端点"""
+    """健康检查端点
+
+    检查应用、数据库、Redis 的健康状态
+    """
     settings = get_settings()
+
+    # 检查数据库连接
+    db_status = await check_database()
+
+    # 检查 Redis 连接
+    redis_status = await check_redis()
+
+    # 计算整体状态：任意组件失败则为 unhealthy
+    overall_status = (
+        "healthy"
+        if db_status.status == "healthy" and redis_status.status == "healthy"
+        else "unhealthy"
+    )
+
     return HealthCheckResponse(
-        status="healthy",
+        status=overall_status,
         version=settings.app_version,
-        timestamp=datetime.now(timezone.utc)
+        timestamp=datetime.now(timezone.utc),
+        database=db_status,
+        redis=redis_status,
     )
 
 
@@ -65,5 +83,5 @@ async def logging_demo(
     return {
         "message": "Logging demo completed",
         "request_id": request_id,
-        "levels_shown": ["debug", "info", "warning", "error"]
+        "levels_shown": ["debug", "info", "warning", "error"],
     }

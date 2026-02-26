@@ -16,12 +16,12 @@ FastAPI 应用主入口测试
 
 from unittest.mock import patch
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.backend.app.core.config import get_settings
 from src.backend.app.main import app, create_app, get_application
+from src.backend.app.schemas.health import ComponentStatus
 
 
 class TestCreateApp:
@@ -145,8 +145,18 @@ class TestHealthEndpoint:
         data = response.json()
         assert "version" in data
 
-    def test_status_is_healthy(self):
+    @patch("src.backend.app.main.check_database")
+    @patch("src.backend.app.main.check_redis")
+    def test_status_is_healthy(self, mock_redis, mock_db):
         """测试 status 值为 healthy"""
+        # 模拟健康的组件状态
+        mock_db.return_value = ComponentStatus(
+            status="healthy", latency_ms=10, error=None
+        )
+        mock_redis.return_value = ComponentStatus(
+            status="healthy", latency_ms=5, error=None
+        )
+
         client = TestClient(app)
         response = client.get("/health")
         data = response.json()

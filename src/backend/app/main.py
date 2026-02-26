@@ -4,18 +4,17 @@ FastAPI 应用主入口
 包含应用创建、配置、中间件、路由注册等核心功能
 """
 
-import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
 
 from .core.config import get_settings
+from .core.health import check_database, check_redis
 from .core.logger import get_logger, setup_logging
-from .schemas.health import ComponentStatus, HealthCheckResponse
+from .schemas.health import HealthCheckResponse
 
 # 全局应用实例缓存
 _app_instance: FastAPI | None = None
@@ -64,54 +63,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Database closed")
 
 
-async def _check_database_health() -> ComponentStatus:
-    """检查数据库健康状态
-
-    通过执行简单的查询来验证数据库连接是否正常
-
-    Returns:
-        ComponentStatus: 数据库组件状态
-    """
-    from .core.database import get_engine
-
-    start_time = time.time()
-    engine = get_engine()
-
-    if engine is None:
-        return ComponentStatus(
-            status="unhealthy", latency_ms=None, error="Database engine not initialized"
-        )
-
-    try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-            latency_ms = int((time.time() - start_time) * 1000)
-            return ComponentStatus(status="healthy", latency_ms=latency_ms, error=None)
-    except Exception as e:
-        return ComponentStatus(status="unhealthy", latency_ms=None, error=str(e))
-
-
-async def _check_redis_health() -> ComponentStatus:
-    """检查 Redis 健康状态
-
-    通过执行 PING 命令来验证 Redis 连接是否正常
-
-    Returns:
-        ComponentStatus: Redis 组件状态
-    """
-    from .core.redis import get_redis_client
-
-    start_time = time.time()
-
-    try:
-        client = await get_redis_client()
-        await client.ping()
-        latency_ms = int((time.time() - start_time) * 1000)
-        return ComponentStatus(status="healthy", latency_ms=latency_ms, error=None)
-    except Exception as e:
-        return ComponentStatus(status="unhealthy", latency_ms=None, error=str(e))
-
-
 def create_app() -> FastAPI:
     """创建 FastAPI 应用实例
 
@@ -158,8 +109,8 @@ def create_app() -> FastAPI:
     async def health() -> HealthCheckResponse:
         """健康检查端点"""
         # 并发检查各组件状态
-        db_status = await _check_database_health()
-        redis_status = await _check_redis_health()
+        db_status = await check_database()
+        redis_status = await check_redis()
 
         # 计算整体健康状态：任一组件不健康则整体不健康
         overall_status = (
