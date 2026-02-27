@@ -14,7 +14,7 @@ import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { AuthApi } from '../auth-api';
 import type { HttpClient } from '../client';
 import type { TokenStorage } from '@/lib/storage/token-storage';
-import type { TokenResponse, UserResponse, AuthResponse } from '@/types/auth';
+import type { TokenResponse, UserResponse, LoginResponse } from '@/types/auth';
 
 // ============================================================================
 // 类型定义
@@ -140,17 +140,17 @@ const createTestUserResponse = (
  * 创建测试用认证响应数据（包含用户信息和 Token）
  *
  * @param overrides - 覆盖默认值
- * @returns AuthResponse 对象
+ * @returns LoginResponse 对象（嵌套结构）
  */
 const createTestAuthResponse = (
-  overrides?: Partial<AuthResponse>
-): AuthResponse => {
+  overrides?: Partial<LoginResponse>
+): LoginResponse => {
   const user = createTestUserResponse();
   const token = createTestTokenResponse();
 
   return {
-    ...user,
-    ...token,
+    user,
+    tokens: token,
     ...overrides,
   };
 };
@@ -285,10 +285,10 @@ describe('AuthApi - Integration Tests', () => {
         // 3. 验证 Token 被保存
         expect(mockTokenStorage.setTokens).toHaveBeenCalledTimes(1);
         expect(mockTokenStorage.setTokens).toHaveBeenCalledWith({
-          access_token: authResponse.access_token,
-          refresh_token: authResponse.refresh_token,
-          token_type: authResponse.token_type,
-          expires_in: authResponse.expires_in,
+          access_token: authResponse.tokens.access_token,
+          refresh_token: authResponse.tokens.refresh_token,
+          token_type: authResponse.tokens.token_type,
+          expires_in: authResponse.tokens.expires_in,
         });
       });
 
@@ -444,10 +444,10 @@ describe('AuthApi - Integration Tests', () => {
         // 3. 验证 Token 被保存
         expect(mockTokenStorage.setTokens).toHaveBeenCalledTimes(1);
         expect(mockTokenStorage.setTokens).toHaveBeenCalledWith({
-          access_token: authResponse.access_token,
-          refresh_token: authResponse.refresh_token,
-          token_type: authResponse.token_type,
-          expires_in: authResponse.expires_in,
+          access_token: authResponse.tokens.access_token,
+          refresh_token: authResponse.tokens.refresh_token,
+          token_type: authResponse.tokens.token_type,
+          expires_in: authResponse.tokens.expires_in,
         });
       });
 
@@ -842,10 +842,10 @@ describe('AuthApi - Integration Tests', () => {
       // 验证登录
       expect(loginResult).toEqual(authResponse);
       expect(mockTokenStorage.setTokens).toHaveBeenCalledWith({
-        access_token: authResponse.access_token,
-        refresh_token: authResponse.refresh_token,
-        token_type: authResponse.token_type,
-        expires_in: authResponse.expires_in,
+        access_token: authResponse.tokens.access_token,
+        refresh_token: authResponse.tokens.refresh_token,
+        token_type: authResponse.tokens.token_type,
+        expires_in: authResponse.tokens.expires_in,
       });
 
       // 验证获取用户

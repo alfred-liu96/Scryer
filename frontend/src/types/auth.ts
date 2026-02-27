@@ -99,3 +99,35 @@ export interface AuthError {
   message: string;
   details?: unknown;
 }
+
+/**
+ * 登录响应模型
+ * 对应后端：POST /api/v1/auth/login 响应
+ */
+export interface LoginResponse {
+  /** 用户信息对象 */
+  user: UserResponse;
+  /** Token 对象 */
+  tokens: TokenResponse;
+}
+
+/**
+ * 注册响应模型
+ * 对应后端：POST /api/v1/auth/register 响应
+ * 结构与 LoginResponse 完全一致
+ */
+export type RegisterResponse = LoginResponse;
+
+/**
+ * Token 刷新请求模型
+ */
+export interface RefreshTokenRequest {
+  /** 刷新 Token 字符串 */
+  refresh_token: string;
+}
+
+/**
+ * Token 刷新响应模型
+ * 与 TokenResponse 结构完全一致
+ */
+export type RefreshTokenResponse = TokenResponse;

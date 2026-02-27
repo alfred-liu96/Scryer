@@ -84,10 +84,11 @@ const createMockUserResponse = (
 
 /**
  * 创建登录响应（包含 User 和 Tokens）
+ * 使用嵌套结构：{ user: {...}, tokens: {...} }
  */
 const createLoginResponse = () => ({
   user: createMockUserResponse(),
-  ...createMockTokenResponse(),
+  tokens: createMockTokenResponse(),
 });
 
 // ============================================================================
@@ -139,10 +140,10 @@ describe('AuthApi', () => {
       // 2. 验证保存 Token
       expect(mockTokenStorage.setTokens).toHaveBeenCalledTimes(1);
       expect(mockTokenStorage.setTokens).toHaveBeenCalledWith({
-        access_token: mockResponse.access_token,
-        refresh_token: mockResponse.refresh_token,
-        token_type: mockResponse.token_type,
-        expires_in: mockResponse.expires_in,
+        access_token: mockResponse.tokens.access_token,
+        refresh_token: mockResponse.tokens.refresh_token,
+        token_type: mockResponse.tokens.token_type,
+        expires_in: mockResponse.tokens.expires_in,
       });
 
       // 3. 验证返回值
@@ -253,10 +254,10 @@ describe('AuthApi', () => {
       // 2. 验证保存 Token
       expect(mockTokenStorage.setTokens).toHaveBeenCalledTimes(1);
       expect(mockTokenStorage.setTokens).toHaveBeenCalledWith({
-        access_token: mockResponse.access_token,
-        refresh_token: mockResponse.refresh_token,
-        token_type: mockResponse.token_type,
-        expires_in: mockResponse.expires_in,
+        access_token: mockResponse.tokens.access_token,
+        refresh_token: mockResponse.tokens.refresh_token,
+        token_type: mockResponse.tokens.token_type,
+        expires_in: mockResponse.tokens.expires_in,
       });
 
       // 3. 验证返回值
