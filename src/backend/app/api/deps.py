@@ -13,8 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import get_settings
 from ..core.database import get_db_session as db_get_db_session
-from ..core.logger import get_logger
-
 
 # 全局日志器实例
 _logger: logging.Logger | None = None
@@ -44,6 +42,7 @@ def get_logger() -> logging.Logger:
         # 导入 logger 模块中的 get_logger 函数并使用
         # 注意：为了向后兼容，使用 "scryer" 作为 logger 名称
         from ..core.logger import get_logger as core_get_logger
+
         _logger = core_get_logger("scryer")
 
     return _logger
@@ -99,7 +98,7 @@ def get_current_user_id() -> str | None:
     return None
 
 
-def get_request_id(request) -> str:
+def get_request_id(request) -> str | None:
     """获取请求 ID 依赖
 
     从请求状态中提取当前请求的唯一标识符
@@ -114,4 +113,5 @@ def get_request_id(request) -> str:
         需要 RequestIDMiddleware 中间件运行
     """
     from ..middleware.request_id import get_request_id as _get_request_id
+
     return _get_request_id(request)

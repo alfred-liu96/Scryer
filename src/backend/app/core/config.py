@@ -6,7 +6,7 @@
 
 import os
 from pathlib import Path
-from typing import List
+from typing import Any, List
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -32,90 +32,61 @@ class Settings(BaseSettings):
     # 数据库配置
     database_url: str = Field(
         default="postgresql+asyncpg://user:password@localhost:5432/scryer",
-        description="数据库连接 URL"
+        description="数据库连接 URL",
     )
-    db_pool_size: int = Field(
-        default=5,
-        ge=1,
-        le=100,
-        description="连接池大小"
-    )
-    db_max_overflow: int = Field(
-        default=10,
-        ge=0,
-        le=100,
-        description="最大溢出连接数"
-    )
-    db_pool_timeout: int = Field(
-        default=30,
-        ge=1,
-        description="连接超时时间（秒）"
-    )
+    db_pool_size: int = Field(default=5, ge=1, le=100, description="连接池大小")
+    db_max_overflow: int = Field(default=10, ge=0, le=100, description="最大溢出连接数")
+    db_pool_timeout: int = Field(default=30, ge=1, description="连接超时时间（秒）")
     db_pool_recycle: int = Field(
-        default=3600,
-        ge=-1,
-        description="连接回收时间（秒），-1 表示不回收"
+        default=3600, ge=-1, description="连接回收时间（秒），-1 表示不回收"
     )
-    db_echo_pool: bool = Field(
-        default=False,
-        description="是否记录连接池日志"
-    )
-    db_echo: bool = Field(
-        default=False,
-        description="是否记录 SQL 日志"
-    )
+    db_echo_pool: bool = Field(default=False, description="是否记录连接池日志")
+    db_echo: bool = Field(default=False, description="是否记录 SQL 日志")
 
     # Redis 配置
     redis_url: str = Field(
-        default="redis://localhost:6379/0",
-        description="Redis 连接 URL"
+        default="redis://localhost:6379/0", description="Redis 连接 URL"
     )
 
     # 安全配置
     secret_key: str = Field(
         default="a" * 32,  # 默认 32 字符密钥（仅用于开发）
         min_length=32,
-        description="应用密钥（至少 32 字符）"
+        description="应用密钥（至少 32 字符）",
     )
 
     # CORS 配置
     cors_origins: List[str] = Field(
-        default=["http://localhost:3000"],
-        description="允许的 CORS 源列表"
+        default=["http://localhost:3000"], description="允许的 CORS 源列表"
     )
 
     # 日志配置
-    log_level: str = Field(
-        default="INFO",
-        description="日志级别"
-    )
-    log_file: str | None = Field(
-        default=None,
-        description="日志文件路径（可选）"
-    )
+    log_level: str = Field(default="INFO", description="日志级别")
+    log_file: str | None = Field(default=None, description="日志文件路径（可选）")
     log_max_bytes: int = Field(
-        default=10485760,  # 10MB
-        description="单个日志文件最大字节数"
+        default=10485760, description="单个日志文件最大字节数"  # 10MB
     )
-    log_backup_count: int = Field(
-        default=5,
-        description="保留的日志备份文件数量"
-    )
+    log_backup_count: int = Field(default=5, description="保留的日志备份文件数量")
     log_format_json: bool = Field(
-        default=True,
-        description="是否使用 JSON 格式输出日志"
+        default=True, description="是否使用 JSON 格式输出日志"
     )
 
     # 路径配置
-    base_dir: str = Field(default=str(Path(__file__).resolve().parent.parent.parent), description="项目根目录")
-    static_dir: str = Field(default=str(Path(__file__).resolve().parent.parent.parent / "static"), description="静态文件目录")
-    templates_dir: str = Field(default=str(Path(__file__).resolve().parent.parent.parent / "templates"), description="模板目录")
+    base_dir: str = Field(
+        default=str(Path(__file__).resolve().parent.parent.parent),
+        description="项目根目录",
+    )
+    static_dir: str = Field(
+        default=str(Path(__file__).resolve().parent.parent.parent / "static"),
+        description="静态文件目录",
+    )
+    templates_dir: str = Field(
+        default=str(Path(__file__).resolve().parent.parent.parent / "templates"),
+        description="模板目录",
+    )
 
     model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False,
-        extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
 
     @field_validator("log_level")
@@ -133,17 +104,18 @@ class Settings(BaseSettings):
         """验证数据库 URL 使用 asyncpg 驱动"""
         if not v.startswith("postgresql+asyncpg://"):
             raise ValueError(
-                "database_url must use asyncpg driver (format: postgresql+asyncpg://...)"
+                "database_url must use asyncpg driver "
+                "(format: postgresql+asyncpg://...)"
             )
         return v
 
     @field_validator("debug", mode="before")
     @classmethod
-    def parse_debug_from_string(cls, v: any) -> bool:
+    def parse_debug_from_string(cls, v: Any) -> bool:
         """解析 DEBUG 字符串为布尔值"""
         if isinstance(v, str):
             return v.lower() in ("true", "1", "yes", "on")
-        return v
+        return bool(v)
 
     @model_validator(mode="after")
     def set_debug_by_environment(self) -> "Settings":

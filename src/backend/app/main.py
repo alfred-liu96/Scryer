@@ -12,7 +12,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .core.config import get_settings
-from .core.logger import setup_logging, get_logger
+from .core.health import check_database, check_redis
+from .core.logger import get_logger, setup_logging
 from .schemas.health import HealthCheckResponse
 
 # 全局应用实例缓存
@@ -45,6 +46,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 初始化数据库
     from .core.database import init_db
+
     init_db()
     logger.info("Database initialized")
 
@@ -56,6 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # 关闭数据库
     from .core.database import close_db
+
     await close_db()
     logger.info("Database closed")
 
@@ -80,6 +83,7 @@ def create_app() -> FastAPI:
 
     # 注册 RequestID 中间件（必须在其他中间件之前）
     from .middleware.request_id import RequestIDMiddleware
+
     app.add_middleware(RequestIDMiddleware)
 
     # 配置 CORS 中间件
@@ -97,21 +101,35 @@ def create_app() -> FastAPI:
         """根端点"""
         return {
             "message": f"Welcome to {settings.app_name}",
-            "version": settings.app_version
+            "version": settings.app_version,
         }
 
     # 注册健康检查端点
     @app.get("/health")
     async def health() -> HealthCheckResponse:
         """健康检查端点"""
+        # 并发检查各组件状态
+        db_status = await check_database()
+        redis_status = await check_redis()
+
+        # 计算整体健康状态：任一组件不健康则整体不健康
+        overall_status = (
+            "healthy"
+            if (db_status.status == "healthy" and redis_status.status == "healthy")
+            else "unhealthy"
+        )
+
         return HealthCheckResponse(
-            status="healthy",
+            status=overall_status,
             version=settings.app_version,
-            timestamp=datetime.now(timezone.utc)
+            timestamp=datetime.now(timezone.utc),
+            database=db_status,
+            redis=redis_status,
         )
 
     # 注册 API 路由
     from .api.router import api_router
+
     app.include_router(api_router, prefix=settings.api_prefix)
 
     return app

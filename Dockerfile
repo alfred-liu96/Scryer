@@ -24,5 +24,9 @@ RUN pip install --no-cache-dir -e ".[dev]" && \
 # 暴露端口
 EXPOSE 8000
 
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
 # 默认命令：保持容器运行
 CMD ["/bin/bash"]

@@ -12,11 +12,13 @@ API 路由测试
 契约来源：Issue #46 蓝图 - api/router.py 模块
 """
 
-import pytest
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
 
-from src.backend.app.main import app
 from src.backend.app.api.router import api_router
+from src.backend.app.main import app
+from src.backend.app.schemas.health import ComponentStatus
 
 
 class TestAPIRouter:
@@ -29,6 +31,7 @@ class TestAPIRouter:
     def test_api_router_is_router(self):
         """测试 api_router 是 FastAPI 路由器"""
         from fastapi import APIRouter
+
         assert isinstance(api_router, APIRouter)
 
 
@@ -54,8 +57,18 @@ class TestHealthEndpoint:
         data = response.json()
         assert "status" in data
 
-    def test_status_value_is_healthy(self):
+    @patch("src.backend.app.api.router.check_database")
+    @patch("src.backend.app.api.router.check_redis")
+    def test_status_value_is_healthy(self, mock_redis, mock_db):
         """测试 status 值为 healthy"""
+        # 模拟健康的组件状态
+        mock_db.return_value = ComponentStatus(
+            status="healthy", latency_ms=10, error=None
+        )
+        mock_redis.return_value = ComponentStatus(
+            status="healthy", latency_ms=5, error=None
+        )
+
         client = TestClient(app)
         response = client.get("/api/health")
         data = response.json()
@@ -104,43 +117,28 @@ class TestRouteRegistration:
 
     def test_api_router_has_health_route(self):
         """测试 api_router 包含健康检查路由"""
-        routes = [
-            route.path for route in api_router.routes
-            if hasattr(route, "path")
-        ]
+        routes = [route.path for route in api_router.routes if hasattr(route, "path")]
         assert "/health" in routes
 
     def test_api_router_has_test_route(self):
         """测试 api_router 包含测试路由"""
-        routes = [
-            route.path for route in api_router.routes
-            if hasattr(route, "path")
-        ]
+        routes = [route.path for route in api_router.routes if hasattr(route, "path")]
         assert "/test" in routes
 
     def test_app_has_api_prefix_routes(self):
         """测试主应用包含 /api 前缀的路由"""
-        routes = [
-            route.path for route in app.routes
-            if hasattr(route, "path")
-        ]
+        routes = [route.path for route in app.routes if hasattr(route, "path")]
         has_api_routes = any(r.startswith("/api") for r in routes)
         assert has_api_routes
 
     def test_api_health_route_exists(self):
         """测试 /api/health 路由存在"""
-        routes = [
-            route.path for route in app.routes
-            if hasattr(route, "path")
-        ]
+        routes = [route.path for route in app.routes if hasattr(route, "path")]
         assert "/api/health" in routes
 
     def test_api_test_route_exists(self):
         """测试 /api/test 路由存在"""
-        routes = [
-            route.path for route in app.routes
-            if hasattr(route, "path")
-        ]
+        routes = [route.path for route in app.routes if hasattr(route, "path")]
         assert "/api/test" in routes
 
 
@@ -162,10 +160,7 @@ class TestOpenAPIDocumentation:
         schema = app.openapi()
         paths = schema.get("paths", {})
         # 可能是 /health 或 /api/health
-        has_health = (
-            "/health" in paths or
-            "/api/health" in paths
-        )
+        has_health = "/health" in paths or "/api/health" in paths
         assert has_health
 
     def test_swagger_ui_accessible(self):
@@ -222,4 +217,3 @@ class TestResponseFormat:
         data = response.json()
         # 应该是字典类型
         assert isinstance(data, dict)
-
