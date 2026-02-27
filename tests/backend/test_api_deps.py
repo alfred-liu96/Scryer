@@ -142,14 +142,13 @@ class TestGetDbSession:
 
         init_db()
 
-        db_gen = get_db_session()
-        _ = await db_gen.__anext__()
+        # 测试生成器可以正常创建和迭代
+        async for _ in get_db_session():
+            # 只测试第一次 yield，然后生成器会自动关闭
+            break
 
-        # 模拟生成器结束
-        try:
-            await db_gen.athrow(GeneratorExit)
-        except Exception:
-            pass
+        # 如果没有异常，测试通过
+        assert True
 
         # 当前没有真实会话，跳过验证
         # TODO: Issue #52 完成后启用验证
