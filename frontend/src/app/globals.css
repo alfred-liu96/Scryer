@@ -1,0 +1,138 @@
+/**
+ * 全局样式 - TailwindCSS 指令
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 自定义基础样式 */
+@layer base {
+  :root {
+    --color-primary: #0ea5e9;
+    --color-primary-dark: #0284c7;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+/* 自定义组件样式 */
+@layer components {
+  /* 按钮样式 */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply bg-primary-500 text-white hover:bg-primary-600;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-900 hover:bg-gray-300;
+  }
+
+  .btn-outline {
+    @apply border border-gray-300 bg-transparent hover:bg-gray-50;
+  }
+
+  .btn-ghost {
+    @apply hover:bg-gray-100;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm;
+  }
+
+  .btn-md {
+    @apply px-4 py-2 text-base;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-lg;
+  }
+
+  /* 卡片样式 */
+  .card {
+    @apply rounded-lg border border-gray-200 bg-white p-6 shadow-sm;
+  }
+
+  .card-outlined {
+    @apply border-2 border-gray-300 bg-transparent shadow-none;
+  }
+
+  .card-elevated {
+    @apply shadow-md;
+  }
+
+  .card-title {
+    @apply mb-4 text-lg font-semibold text-gray-900;
+  }
+
+  .card-content {
+    @apply text-gray-700;
+  }
+
+  /* 输入框样式 */
+  .input-wrapper {
+    @apply flex w-full flex-col gap-1;
+  }
+
+  .input-label {
+    @apply text-sm font-medium text-gray-700;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20;
+  }
+
+  .input-error {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
+  }
+
+  .input-error-text {
+    @apply text-sm text-red-600;
+  }
+
+  /* 头部样式 */
+  .header {
+    @apply flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 shadow-sm;
+  }
+
+  .header-logo {
+    @apply flex items-center gap-2;
+  }
+
+  .header-nav {
+    @apply flex items-center gap-6;
+  }
+
+  .header-actions {
+    @apply flex items-center gap-4;
+  }
+
+  /* 底部样式 */
+  .footer {
+    @apply border-t border-gray-200 bg-gray-50 px-6 py-4 mt-auto;
+  }
+
+  .footer-content {
+    @apply mx-auto max-w-7xl flex items-center justify-between;
+  }
+
+  .footer-copyright {
+    @apply text-sm text-gray-600;
+  }
+
+  .footer-links {
+    @apply flex items-center gap-4;
+  }
+}
+
+/* 自定义工具样式 */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
