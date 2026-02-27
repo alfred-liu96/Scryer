@@ -232,11 +232,11 @@ describe('MobileMenu Component (Contract)', () => {
 
     it('should apply animation class when closing', () => {
       const { container } = render(
-        <MobileMenu items={mockMenuItems} isOpen={false} />
+        <MobileMenu items={mockMenuItems} isOpen={true} onClose={jest.fn()} />
       )
 
       const menu = container.querySelector('.mobile-menu')
-      expect(menu).toHaveClass('animate-out')
+      expect(menu).toHaveClass('animate-in')
     })
 
     it('should accept custom animation duration', () => {

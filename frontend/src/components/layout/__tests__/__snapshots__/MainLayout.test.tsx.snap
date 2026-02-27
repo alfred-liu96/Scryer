@@ -1,0 +1,101 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`MainLayout Component (Contract) Snapshot Contract should match snapshot with all regions 1`] = `
+<div
+  class="main-layout responsive layout-default layout-with-sidebar sidebar-left sidebar-breakpoint-md sidebar-hide-mobile"
+>
+  <div
+    class="main-layout-header"
+  >
+    <header>
+      Header
+    </header>
+  </div>
+  <div
+    class="main-layout-body"
+  >
+    <aside
+      class="main-layout-sidebar"
+    >
+      <aside>
+        Sidebar
+      </aside>
+    </aside>
+    <main
+      class="main-layout-content"
+    >
+      <main>
+        Content
+      </main>
+    </main>
+  </div>
+  <div
+    class="main-layout-footer"
+  >
+    <footer>
+      Footer
+    </footer>
+  </div>
+</div>
+`;
+
+exports[`MainLayout Component (Contract) Snapshot Contract should match snapshot with compact variant 1`] = `
+<div
+  class="main-layout responsive layout-compact"
+>
+  <div
+    class="main-layout-body"
+  >
+    <main
+      class="main-layout-content"
+    >
+      <main>
+        Content
+      </main>
+    </main>
+  </div>
+</div>
+`;
+
+exports[`MainLayout Component (Contract) Snapshot Contract should match snapshot with only content 1`] = `
+<div
+  class="main-layout responsive layout-default"
+>
+  <div
+    class="main-layout-body"
+  >
+    <main
+      class="main-layout-content"
+    >
+      <main>
+        Content
+      </main>
+    </main>
+  </div>
+</div>
+`;
+
+exports[`MainLayout Component (Contract) Snapshot Contract should match snapshot with right sidebar 1`] = `
+<div
+  class="main-layout responsive layout-default layout-with-sidebar sidebar-right sidebar-breakpoint-md sidebar-hide-mobile"
+>
+  <div
+    class="main-layout-body"
+  >
+    <aside
+      class="main-layout-sidebar"
+    >
+      <aside>
+        Sidebar
+      </aside>
+    </aside>
+    <main
+      class="main-layout-content"
+    >
+      <main>
+        Content
+      </main>
+    </main>
+  </div>
+</div>
+`;

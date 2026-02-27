@@ -44,7 +44,10 @@ describe('PageSkeleton Component (Contract)', () => {
       const { container } = render(<PageSkeleton variant="card" />)
 
       const skeleton = container.querySelector('.page-skeleton')
-      expect(skeleton).toHaveClass('skeleton-card')
+      expect(skeleton).toBeInTheDocument()
+      expect(skeleton).toHaveClass('grid')
+      const cards = container.querySelectorAll('.skeleton-card')
+      expect(cards.length).toBeGreaterThan(0)
     })
 
     it('should render text skeleton variant', () => {

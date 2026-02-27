@@ -30,11 +30,13 @@ describe('Footer Component', () => {
     })
 
     it('should render copyright section', () => {
-      render(<Footer copyright="© 2025 Scryer" />)
+      const { container } = render(<Footer copyright="© 2025 Scryer" />)
 
       const copyright = screen.getByText('© 2025 Scryer')
       expect(copyright).toBeInTheDocument()
-      expect(copyright.parentElement).toHaveClass('footer-copyright')
+      const copyrightSection = container.querySelector('.footer-copyright')
+      expect(copyrightSection).toBeInTheDocument()
+      expect(copyrightSection).toHaveTextContent('© 2025 Scryer')
     })
 
     it('should render links section', () => {
