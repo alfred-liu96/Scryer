@@ -234,6 +234,93 @@ class CacheKeyNotFoundError(ScryerException):
         super().__init__(detail, status_code=500, extra=extra)
 
 
+class InvalidTokenError(ScryerException):
+    """无效 Token 异常
+
+    用于 Token 格式错误、签名无效、过期等情况
+
+    Attributes:
+        detail (str): 错误详情
+        token_type (str | None): Token 类型 (access/refresh)
+        extra (dict | None): 额外数据
+    """
+
+    def __init__(
+        self,
+        detail: str,
+        *,
+        token_type: str | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        self.token_type = token_type
+        super().__init__(detail, status_code=401, extra=extra)
+
+
+class TokenExpiredError(InvalidTokenError):
+    """Token 过期异常
+
+    专用于 Token 过期的情况
+
+    Attributes:
+        detail (str): 错误详情
+        token_type (str | None): Token 类型
+        expired_at (datetime | None): 过期时间
+        extra (dict | None): 额外数据
+    """
+
+    def __init__(
+        self,
+        detail: str,
+        *,
+        token_type: str | None = None,
+        expired_at: Any | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        self.expired_at = expired_at
+        super().__init__(detail, token_type=token_type, extra=extra)
+
+
+class InvalidCredentialsError(ScryerException):
+    """无效凭证异常
+
+    用于用户名或密码错误的情况
+
+    Attributes:
+        detail (str): 错误详情
+        extra (dict | None): 额外数据
+    """
+
+    def __init__(
+        self,
+        detail: str = "Invalid username or password",
+        *,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(detail, status_code=401, extra=extra)
+
+
+class InactiveUserError(ScryerException):
+    """用户未激活异常
+
+    用于用户账户被禁用的情况
+
+    Attributes:
+        detail (str): 错误详情
+        user_id (int | None): 用户 ID
+        extra (dict | None): 额外数据
+    """
+
+    def __init__(
+        self,
+        detail: str,
+        *,
+        user_id: int | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> None:
+        self.user_id = user_id
+        super().__init__(detail, status_code=403, extra=extra)
+
+
 async def scryer_exception_handler(
     request: Request, exc: ScryerException
 ) -> JSONResponse:
