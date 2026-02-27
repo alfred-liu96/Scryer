@@ -7,18 +7,21 @@
  * - POST /api/v1/auth/refresh - 刷新 Token
  * - GET /api/v1/auth/me - 获取当前用户信息
  *
- * 职责：
- * - 封装认证相关的 HTTP 请求
- * - 自动保存 Token 到 TokenStorage
- * - 提供类型安全的 API 接口
+ * 职责划分：
+ * - auth-api.ts: 封装认证相关的 HTTP 请求，提供类型安全的 API 接口
+ * - types/auth.ts: 定义所有认证相关的 TypeScript 类型（请求/响应模型）
+ * - AuthApi 类负责：调用 HTTP 客户端、自动保存 Token 到 TokenStorage
+ * - 类型定义负责：定义与后端 API 契约对应的 TypeScript 接口
  */
 
 import type { HttpClient } from './client';
 import type { TokenStorage } from '@/lib/storage/token-storage';
 import type { TokenResponse, UserResponse } from '@/types/auth';
+import type { LoginResponse, RegisterResponse } from '@/types/auth';
 
 /**
  * 登录/注册响应（包含用户信息和 Token）
+ * @deprecated 使用 LoginResponse 或 RegisterResponse 代替
  */
 export interface AuthResponse extends UserResponse, TokenResponse {}
 
@@ -54,7 +57,7 @@ export class AuthApi {
    * @returns 用户信息和 Token
    * @throws {Error} 登录失败时抛出异常
    */
-  async login(usernameOrEmail: string, password: string): Promise<AuthResponse> {
+  async login(usernameOrEmail: string, password: string): Promise<LoginResponse> {
     // 判断是用户名还是邮箱
     const isEmail = usernameOrEmail.includes('@');
     const payload = isEmail
@@ -62,7 +65,7 @@ export class AuthApi {
       : { username: usernameOrEmail, password };
 
     // 发送登录请求（skipAuth: true 表示不需要 Token）
-    const response = await this.httpClient.post<AuthResponse>(
+    const response = await this.httpClient.post<LoginResponse>(
       '/api/v1/auth/login',
       payload,
       { skipAuth: true }
@@ -70,10 +73,10 @@ export class AuthApi {
 
     // 保存 Token
     this.tokenStorage.setTokens({
-      access_token: response.access_token,
-      refresh_token: response.refresh_token,
-      token_type: response.token_type,
-      expires_in: response.expires_in,
+      access_token: response.tokens.access_token,
+      refresh_token: response.tokens.refresh_token,
+      token_type: response.tokens.token_type,
+      expires_in: response.tokens.expires_in,
     });
 
     return response;
@@ -94,9 +97,9 @@ export class AuthApi {
     username: string,
     email: string,
     password: string
-  ): Promise<AuthResponse> {
+  ): Promise<RegisterResponse> {
     // 发送注册请求（skipAuth: true 表示不需要 Token）
-    const response = await this.httpClient.post<AuthResponse>(
+    const response = await this.httpClient.post<RegisterResponse>(
       '/api/v1/auth/register',
       { username, email, password },
       { skipAuth: true }
@@ -104,10 +107,10 @@ export class AuthApi {
 
     // 保存 Token
     this.tokenStorage.setTokens({
-      access_token: response.access_token,
-      refresh_token: response.refresh_token,
-      token_type: response.token_type,
-      expires_in: response.expires_in,
+      access_token: response.tokens.access_token,
+      refresh_token: response.tokens.refresh_token,
+      token_type: response.tokens.token_type,
+      expires_in: response.tokens.expires_in,
     });
 
     return response;
