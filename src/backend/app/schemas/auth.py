@@ -57,6 +57,18 @@ class LoginRequest(BaseModel):
         return self
 
 
+class RefreshRequest(BaseModel):
+    """Token 刷新请求模型
+
+    用于接收 refresh_token 并返回新的 Token 对
+
+    Attributes:
+        refresh_token (str): 刷新 Token 字符串
+    """
+
+    refresh_token: str = Field(..., min_length=1, description="刷新 Token")
+
+
 class UserResponse(BaseModel):
     """用户信息响应模型
 
