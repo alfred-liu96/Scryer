@@ -34,6 +34,7 @@ dev = [
     "flake8==7.3.0",
     "httpx>=0.28.0",
     "pyyaml",
+    "aiosqlite>=0.22.0",
 ]
 
 [tool.black]
@@ -67,6 +68,13 @@ module = [
     "backend.app.models.content",
     "backend.app.models.query",
     "backend.app.models.user",
+    "src.backend.app.models.base",
+    "src.backend.app.models.task",
+    "src.backend.app.models.search_result",
+    "src.backend.app.models.content",
+    "src.backend.app.models.query",
+    "src.backend.app.models.user",
+    "src.backend.app.repositories.base",
 ]
 ignore_errors = true
 
