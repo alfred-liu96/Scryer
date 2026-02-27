@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import Any, AsyncGenerator
+
+# 类型提示导入
+from typing import TYPE_CHECKING, Any, AsyncGenerator
 from urllib.parse import urlparse
 
 import asyncpg
@@ -20,12 +22,16 @@ import pytest
 import pytest_asyncio
 from redis.asyncio import ConnectionPool as AsyncConnectionPool
 from redis.asyncio import Redis as AsyncRedis
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+
+if TYPE_CHECKING:
+    from tests.integration.helpers import AlembicTestHelper
 
 # ============================================================================
 # Environment Configuration
@@ -330,6 +336,65 @@ async def check_redis_container() -> bool:  # type: ignore[return]
 # ============================================================================
 
 
+@pytest.fixture(scope="session")
+def alembic_test_helper() -> AlembicTestHelper:
+    """创建 Alembic 测试辅助工具实例
+
+    Returns:
+        AlembicTestHelper: Alembic 测试辅助工具
+    """
+    from tests.integration.helpers import AlembicTestHelper
+
+    db_url = _get_docker_db_url()
+    return AlembicTestHelper(db_url=db_url)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def clean_alembic_version(
+    docker_db_engine: AsyncEngine,
+) -> AsyncGenerator[None, None]:
+    """清理 Alembic 版本表
+
+    在测试前清理 alembic_version 表，确保测试从干净状态开始
+    """
+    async with docker_db_engine.begin() as conn:
+        await conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
+    yield
+
+
+@pytest_asyncio.fixture(scope="function")
+async def migrated_database(
+    docker_db_engine: AsyncEngine,
+    alembic_test_helper: AlembicTestHelper,
+) -> AsyncGenerator[AsyncEngine, None]:
+    """执行完整迁移的数据库
+
+    此 fixture 会：
+    1. 清理数据库
+    2. 执行所有迁移到最新版本
+    3. 提供已迁移的数据库引擎
+    4. 测试结束后清理
+
+    Yields:
+        AsyncEngine: 已执行迁移的数据库引擎
+    """
+    from tests.integration.helpers import AlembicTestHelper
+
+    helper = AlembicTestHelper(db_url=_get_docker_db_url())
+
+    # 清理并执行迁移
+    await helper.drop_all_tables(docker_db_engine)
+
+    # 在线程池中执行同步的 Alembic 操作
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, helper.upgrade, "head")
+
+    yield docker_db_engine
+
+    # 清理
+    await helper.drop_all_tables(docker_db_engine)
+
+
 @pytest_asyncio.fixture(scope="session")
 async def run_alembic_migrations(
     docker_db_engine: AsyncEngine,
@@ -352,7 +417,7 @@ async def run_alembic_migrations(
         # 这里可以添加实际的 Alembic 迁移逻辑
         # 由于 Alembic 需要同步执行，我们使用 asyncio.to_thread
         # 或者直接使用 SQLAlchemy 创建表（用于测试）
-        from backend.app.models import Base
+        from src.backend.app.models import Base
 
         async with docker_db_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
