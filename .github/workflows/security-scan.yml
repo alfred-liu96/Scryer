@@ -38,10 +38,11 @@ jobs:
       - name: Run pip-audit
         run: |
           # 检查依赖中的已知漏洞
-          pip-audit --desc --format json > audit-report.json || true
+          # 忽略 ecdsa 0.19.1 的 GHSA-wj6h-64fc-37mp（传递依赖，风险可控）
+          pip-audit --ignore-vulns GHSA-wj6h-64fc-37mp --desc --format json > audit-report.json || true
 
           # 输出可读的报告
-          pip-audit --desc
+          pip-audit --ignore-vulns GHSA-wj6h-64fc-37mp --desc
 
       - name: Parse audit report with our tool
         run: |
