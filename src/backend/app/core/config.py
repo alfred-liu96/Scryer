@@ -55,6 +55,29 @@ class Settings(BaseSettings):
         description="应用密钥（至少 32 字符）",
     )
 
+    # JWT 配置
+    jwt_secret_key: str = Field(
+        default="",  # 生产环境必须设置
+        min_length=32,
+        description="JWT 签名密钥（至少 32 字符）",
+    )
+    jwt_algorithm: str = Field(
+        default="HS256",
+        description="JWT 签名算法 (HS256/RS256)",
+    )
+    jwt_access_token_expire_minutes: int = Field(
+        default=30,
+        ge=1,
+        le=1440,  # 最大 24 小时
+        description="访问 Token 过期时间（分钟）",
+    )
+    jwt_refresh_token_expire_days: int = Field(
+        default=7,
+        ge=1,
+        le=30,  # 最大 30 天
+        description="刷新 Token 过期时间（天）",
+    )
+
     # CORS 配置
     cors_origins: List[str] = Field(
         default=["http://localhost:3000"], description="允许的 CORS 源列表"
@@ -143,6 +166,34 @@ class Settings(BaseSettings):
         # else: DEBUG 环境变量已设置，保持其值不变
 
         return self
+
+    @field_validator("jwt_algorithm")
+    @classmethod
+    def validate_jwt_algorithm(cls, v: str) -> str:
+        """验证 JWT 算法是否支持"""
+        valid_algorithms = ["HS256", "HS384", "HS512", "RS256", "RS384", "RS512"]
+        if v not in valid_algorithms:
+            raise ValueError(
+                f"jwt_algorithm must be one of {valid_algorithms}, got '{v}'"
+            )
+        return v
+
+    @model_validator(mode="after")
+    def set_jwt_secret_fallback(self) -> "Settings":
+        """如果未显式设置 JWT 密钥，使用 secret_key 作为后备"""
+        if not self.jwt_secret_key:
+            # 仅在开发环境允许使用 secret_key 作为后备
+            if self.environment == "production":
+                raise ValueError(
+                    "jwt_secret_key must be explicitly set in production environment"
+                )
+            self.jwt_secret_key = self.secret_key
+        return self
+
+    @property
+    def jwt_access_token_expire_seconds(self) -> int:
+        """访问 Token 过期时间（秒）"""
+        return self.jwt_access_token_expire_minutes * 60
 
 
 # 全局配置实例缓存
