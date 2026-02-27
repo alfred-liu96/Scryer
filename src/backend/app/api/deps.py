@@ -9,10 +9,17 @@ import logging
 from typing import AsyncGenerator
 
 import structlog
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import get_settings
 from ..core.database import get_db_session as db_get_db_session
+from ..core.exceptions import InvalidTokenError, TokenExpiredError
+from ..core.security import JWTService, SecurityService
+from ..models.user import User
+from ..repositories.user import UserRepository
+from ..services.auth import AuthService
 
 # 全局日志器实例
 _logger: logging.Logger | None = None
@@ -82,20 +89,90 @@ def get_db():
     return get_db_session
 
 
-def get_current_user_id() -> str | None:
-    """获取当前用户ID依赖
+def get_security_service() -> SecurityService:
+    """获取 SecurityService 单例"""
+    return SecurityService()
 
-    从请求上下文中提取当前认证的用户ID
+
+def get_jwt_service() -> JWTService:
+    """获取 JWTService 单例"""
+    settings = get_settings()
+    return JWTService(settings)
+
+
+def get_auth_service(
+    security_service: SecurityService = Depends(get_security_service),
+    jwt_service: JWTService = Depends(get_jwt_service),
+) -> AuthService:
+    """获取 AuthService 实例"""
+    settings = get_settings()
+    return AuthService(
+        security_service=security_service,
+        jwt_service=jwt_service,
+        access_token_expire_seconds=settings.jwt_access_token_expire_minutes * 60,
+    )
+
+
+def get_user_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> UserRepository:
+    """获取 UserRepository 实例"""
+    return UserRepository(session)
+
+
+# HTTP Bearer 认证方案
+security = HTTPBearer()
+
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    jwt_service: JWTService = Depends(get_jwt_service),
+    session: AsyncSession = Depends(get_db_session),
+    user_repo: UserRepository = Depends(get_user_repository),
+) -> User:
+    """获取当前认证用户
+
+    从 JWT Token 中提取用户信息并验证
+
+    Args:
+        credentials: HTTP Bearer 认证凭证
+        jwt_service: JWT 服务
+        session: 数据库会话
+        user_repo: 用户仓储
 
     Returns:
-        str | None: 用户ID，未认证时返回 None
+        User: 当前认证用户
 
-    Note:
-        当前阶段返回 None，后续实现认证后需要从 JWT token 或 session 中提取
+    Raises:
+        HTTPException: Token 无效或用户不存在
     """
-    # TODO: 实现真实的用户认证逻辑
-    # 当前阶段返回 None，表示未认证
-    return None
+    token = credentials.credentials
+
+    try:
+        # 验证 Token
+        payload = jwt_service.verify_access_token(token)
+        user_id = payload["sub"]
+
+        # 查询用户
+        user = await user_repo.get_by_id(user_id)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+            )
+
+        return user
+
+    except InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        ) from e
+    except TokenExpiredError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        ) from e
 
 
 def get_request_id(request) -> str | None:

@@ -12,6 +12,7 @@ from ..core.config import get_settings
 from ..core.health import check_database, check_redis
 from ..schemas.health import HealthCheckResponse
 from .deps import get_request_id, get_structlog_logger
+from .v1.auth import router as auth_router
 
 # 创建主路由器
 api_router = APIRouter()
@@ -85,3 +86,7 @@ async def logging_demo(
         "request_id": request_id,
         "levels_shown": ["debug", "info", "warning", "error"],
     }
+
+
+# 注册 v1 路由
+api_router.include_router(auth_router, prefix="/v1")
