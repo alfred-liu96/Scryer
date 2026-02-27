@@ -1,0 +1,149 @@
+# =============================================================================
+# Docker Compose 测试环境配置
+# =============================================================================
+# 用途：
+# - 运行集成测试
+# - 验证服务间通信
+# - 测试数据库和 Redis 连接
+# - 测试 Alembic 迁移
+#
+# 使用方法：
+#   docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+#   docker-compose -f docker-compose.test.yml down
+# =============================================================================
+
+version: "3.8"
+
+services:
+  # =============================================================================
+  # PostgreSQL 15 测试服务
+  # =============================================================================
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: scryer-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-scryer}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-scryer_test}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"  # 使用不同端口避免冲突
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-scryer} -d ${POSTGRES_DB:-scryer_test}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - scryer-test-network
+
+  # =============================================================================
+  # Redis 7 测试服务
+  # =============================================================================
+  redis-test:
+    image: redis:7-alpine
+    container_name: scryer-redis-test
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_test_data:/data
+    ports:
+      - "6380:6379"  # 使用不同端口避免冲突
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - scryer-test-network
+
+  # =============================================================================
+  # 集成测试服务
+  # =============================================================================
+  integration-tests:
+    container_name: scryer-integration-tests
+    image: scryer:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      # 源代码绑定挂载
+      - .:/app
+      # 虚拟环境卷
+      - scryer-test-venv:/app/.venv
+      # 测试结果输出
+      - test-results:/app/test-results
+    # 服务依赖关系：等待基础设施健康检查通过后再启动
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    # 环境变量：覆盖为测试环境配置
+    environment:
+      # 测试环境标识
+      - ENVIRONMENT=testing
+      - DEBUG=true
+      # 覆盖数据库 URL，使用测试数据库和服务名
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-scryer}:${POSTGRES_PASSWORD}@postgres-test:5432/${POSTGRES_DB:-scryer_test}
+      # 覆盖 Redis URL，使用服务名
+      - REDIS_URL=redis://redis-test:6379/1  # 使用数据库 1 避免与开发环境冲突
+      # 测试配置
+      - TEST_DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-scryer}:${POSTGRES_PASSWORD}@postgres-test:5432/${POSTGRES_DB:-scryer_test}
+      - TEST_REDIS_URL=redis://redis-test:6379/1
+      # 覆盖率配置
+      - PYTEST_ADDOPTS=--cov=src --cov-report=term-missing --cov-report=html:/app/test-results/coverage --cov-report=xml:/app/test-results/coverage.xml
+    # 从 .env 文件加载环境变量
+    env_file:
+      - .env
+    networks:
+      - scryer-test-network
+    # 运行测试后自动退出
+    command: >
+      sh -c "
+        echo 'Waiting for services to be ready...' &&
+        sleep 5 &&
+        echo 'Running integration tests...' &&
+        pytest tests/integration/ -v --tb=short &&
+        echo 'Tests completed.'
+      "
+
+# =============================================================================
+# 命名卷定义（测试数据持久化）
+# =============================================================================
+volumes:
+  # PostgreSQL 测试数据卷
+  postgres_test_data:
+    driver: local
+    name: scryer-postgres-test-data
+
+  # Redis 测试数据卷
+  redis_test_data:
+    driver: local
+    name: scryer-redis-test-data
+
+  # 测试环境虚拟环境卷
+  scryer-test-venv:
+    driver: local
+
+  # 测试结果输出卷
+  test-results:
+    driver: local
+
+# =============================================================================
+# 网络定义
+# =============================================================================
+networks:
+  scryer-test-network:
+    driver: bridge
+    name: scryer-test-network
