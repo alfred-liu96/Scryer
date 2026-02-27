@@ -2,6 +2,8 @@
  * 首页组件
  */
 
+import { PageSkeleton } from '@/components/layout';
+
 export default function HomePage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8">
@@ -27,6 +29,12 @@ export default function HomePage() {
             </ul>
           </div>
         </div>
+      </div>
+
+      {/* 演示骨架屏组件 */}
+      <div className="max-w-2xl w-full mt-12">
+        <h2 className="text-2xl font-bold mb-4">Loading States</h2>
+        <PageSkeleton variant="default" />
       </div>
     </main>
   );

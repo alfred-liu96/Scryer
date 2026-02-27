@@ -128,6 +128,261 @@
   .footer-links {
     @apply flex items-center gap-4;
   }
+
+  /* 导航菜单样式 */
+  .navigation {
+    @apply flex gap-1;
+  }
+
+  .navigation-horizontal {
+    @apply flex-row;
+  }
+
+  .navigation-vertical {
+    @apply flex-col;
+  }
+
+  .navigation-item {
+    @apply flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500/20;
+  }
+
+  .navigation-item.active {
+    @apply bg-primary-50 text-primary-700;
+  }
+
+  .navigation-item.disabled {
+    @apply cursor-not-allowed opacity-50 hover:bg-transparent;
+  }
+
+  .navigation-icon {
+    @apply flex-shrink-0;
+  }
+
+  .navigation-label {
+    @apply truncate;
+  }
+
+  /* 移动端菜单样式 */
+  .mobile-menu-container {
+    @apply relative;
+  }
+
+  .mobile-menu-toggle {
+    @apply inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500/20;
+  }
+
+  .mobile-menu {
+    @apply fixed inset-y-0 z-50 w-64 bg-white shadow-lg transition-transform duration-300 ease-in-out;
+  }
+
+  .mobile-menu.position-left {
+    @apply left-0;
+  }
+
+  .mobile-menu.position-right {
+    @apply right-0;
+  }
+
+  .mobile-menu-item {
+    @apply flex items-center gap-3 border-b border-gray-100 px-4 py-3 text-gray-700 hover:bg-gray-50 focus:outline-none;
+  }
+
+  .mobile-menu-icon {
+    @apply flex-shrink-0;
+  }
+
+  .mobile-menu-label {
+    @apply font-medium;
+  }
+
+  /* 主布局样式 */
+  .main-layout {
+    @apply flex min-h-screen flex-col;
+  }
+
+  .main-layout.responsive {
+    @apply w-full;
+  }
+
+  .layout-default {
+    @apply mx-auto max-w-7xl;
+  }
+
+  .layout-compact {
+    @apply mx-auto max-w-4xl;
+  }
+
+  .layout-full-width {
+    @apply mx-auto max-w-full;
+  }
+
+  .layout-with-sidebar {
+    @apply flex-row;
+  }
+
+  .main-layout-header {
+    @apply flex-shrink-0;
+  }
+
+  .main-layout-body {
+    @apply flex flex-1 flex-col md:flex-row;
+  }
+
+  .main-layout-sidebar {
+    @apply w-full flex-shrink-0 md:w-64;
+  }
+
+  .main-layout-content {
+    @apply flex-1 overflow-auto;
+  }
+
+  .sidebar-left .main-layout-sidebar {
+    @apply order-first;
+  }
+
+  .sidebar-right .main-layout-sidebar {
+    @apply order-last;
+  }
+
+  .sidebar-breakpoint-sm .main-layout-sidebar {
+    @apply hidden sm:block;
+  }
+
+  .sidebar-breakpoint-md .main-layout-sidebar {
+    @apply hidden md:block;
+  }
+
+  .sidebar-breakpoint-lg .main-layout-sidebar {
+    @apply hidden lg:block;
+  }
+
+  .sidebar-breakpoint-xl .main-layout-sidebar {
+    @apply hidden xl:block;
+  }
+
+  .sidebar-hide-mobile .main-layout-sidebar {
+    @apply hidden;
+  }
+
+  /* 骨架屏样式 */
+  .page-skeleton {
+    @apply space-y-4;
+  }
+
+  .skeleton-gray {
+    @apply bg-gray-200;
+  }
+
+  .skeleton-blue {
+    @apply bg-blue-100;
+  }
+
+  .skeleton-slate {
+    @apply bg-slate-200;
+  }
+
+  .skeleton-small {
+    @apply h-4;
+  }
+
+  .skeleton-medium {
+    @apply h-6;
+  }
+
+  .skeleton-large {
+    @apply h-8;
+  }
+
+  .skeleton-title {
+    @apply h-8 w-1/3 rounded bg-slate-200;
+  }
+
+  .skeleton-description {
+    @apply mt-4 h-4 w-full rounded bg-slate-200;
+  }
+
+  .skeleton-content {
+    @apply mt-6 space-y-3;
+  }
+
+  .skeleton-content-line {
+    @apply h-4 w-full rounded bg-slate-200;
+  }
+
+  .skeleton-list-item {
+    @apply flex items-center gap-4 rounded-lg border border-gray-200 bg-white p-4;
+  }
+
+  .skeleton-avatar {
+    @apply h-12 w-12 flex-shrink-0 rounded-full bg-slate-200;
+  }
+
+  .skeleton-item-content {
+    @apply flex-1 space-y-2;
+  }
+
+  .skeleton-item-title {
+    @apply h-4 w-1/2 rounded bg-slate-200;
+  }
+
+  .skeleton-item-description {
+    @apply h-3 w-2/3 rounded bg-slate-200;
+  }
+
+  .skeleton-card {
+    @apply rounded-lg border border-gray-200 bg-white p-4 shadow-sm;
+  }
+
+  .skeleton-card-header {
+    @apply mb-4 h-6 w-1/3 rounded bg-slate-200;
+  }
+
+  .skeleton-card-body {
+    @apply space-y-2;
+  }
+
+  .skeleton-card-line {
+    @apply h-4 w-full rounded bg-slate-200;
+  }
+
+  .skeleton-card-footer {
+    @apply mt-4 h-8 w-1/4 rounded bg-slate-200;
+  }
+
+  .skeleton-text-line {
+    @apply h-4 rounded bg-slate-200;
+  }
+
+  /* 骨架屏动画 */
+  .animate-shimmer {
+    @apply animate-pulse;
+  }
+
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .animation-slow {
+    animation-duration: 3s;
+  }
+
+  .animation-normal {
+    animation-duration: 2s;
+  }
+
+  .animation-fast {
+    animation-duration: 1s;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
 }
 
 /* 自定义工具样式 */

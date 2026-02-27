@@ -1,0 +1,131 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Navigation Component (Contract) Snapshot Contract should match snapshot with active item 1`] = `
+<nav
+  aria-label="Main navigation"
+  class="navigation navigation-horizontal"
+  role="navigation"
+>
+  <a
+    aria-disabled="false"
+    class="navigation-item"
+    href="/"
+  >
+    <span
+      class="navigation-label"
+    >
+      Home
+    </span>
+  </a>
+  <a
+    aria-current="page"
+    aria-disabled="false"
+    class="navigation-item active"
+    href="/tasks"
+  >
+    <span
+      class="navigation-label"
+    >
+      Tasks
+    </span>
+  </a>
+  <a
+    aria-disabled="false"
+    class="navigation-item"
+    href="/settings"
+  >
+    <span
+      class="navigation-label"
+    >
+      Settings
+    </span>
+  </a>
+</nav>
+`;
+
+exports[`Navigation Component (Contract) Snapshot Contract should match snapshot with default props 1`] = `
+<nav
+  aria-label="Main navigation"
+  class="navigation navigation-horizontal"
+  role="navigation"
+>
+  <a
+    aria-disabled="false"
+    class="navigation-item"
+    href="/"
+  >
+    <span
+      class="navigation-label"
+    >
+      Home
+    </span>
+  </a>
+  <a
+    aria-disabled="false"
+    class="navigation-item"
+    href="/tasks"
+  >
+    <span
+      class="navigation-label"
+    >
+      Tasks
+    </span>
+  </a>
+  <a
+    aria-disabled="false"
+    class="navigation-item"
+    href="/settings"
+  >
+    <span
+      class="navigation-label"
+    >
+      Settings
+    </span>
+  </a>
+</nav>
+`;
+
+exports[`Navigation Component (Contract) Snapshot Contract should match snapshot with icons 1`] = `
+<nav
+  aria-label="Main navigation"
+  class="navigation navigation-horizontal"
+  role="navigation"
+>
+  <a
+    aria-disabled="false"
+    class="navigation-item"
+    href="/"
+  >
+    <span
+      class="navigation-icon"
+    >
+      <span>
+        H
+      </span>
+    </span>
+    <span
+      class="navigation-label"
+    >
+      Home
+    </span>
+  </a>
+  <a
+    aria-disabled="false"
+    class="navigation-item"
+    href="/tasks"
+  >
+    <span
+      class="navigation-icon"
+    >
+      <span>
+        T
+      </span>
+    </span>
+    <span
+      class="navigation-label"
+    >
+      Tasks
+    </span>
+  </a>
+</nav>
+`;

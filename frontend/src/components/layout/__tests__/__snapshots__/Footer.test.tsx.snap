@@ -1,0 +1,80 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Footer Component Snapshot should match snapshot with all props 1`] = `
+<footer
+  class="footer"
+>
+  <div
+    class="footer-content"
+  >
+    <div
+      class="footer-copyright"
+    >
+      © 2025 Scryer
+    </div>
+    <div
+      class="footer-links"
+    >
+      <nav>
+        Links
+      </nav>
+    </div>
+  </div>
+</footer>
+`;
+
+exports[`Footer Component Snapshot should match snapshot with complex content 1`] = `
+<footer
+  class="footer"
+>
+  <div
+    class="footer-content"
+  >
+    <div
+      class="footer-copyright"
+    >
+      © 2025 Scryer Inc. All rights reserved.
+    </div>
+    <div
+      class="footer-links"
+    >
+      <nav>
+        <div
+          class="link-section"
+        >
+          <h4>
+            Product
+          </h4>
+          <a
+            href="/features"
+          >
+            Features
+          </a>
+          <a
+            href="/pricing"
+          >
+            Pricing
+          </a>
+        </div>
+      </nav>
+    </div>
+  </div>
+</footer>
+`;
+
+exports[`Footer Component Snapshot should match snapshot without props 1`] = `
+<footer
+  class="footer"
+>
+  <div
+    class="footer-content"
+  >
+    <div
+      class="footer-copyright"
+    />
+    <div
+      class="footer-links"
+    />
+  </div>
+</footer>
+`;
