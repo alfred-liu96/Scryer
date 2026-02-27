@@ -3,8 +3,8 @@
 # Docker 容器启动脚本
 #
 # 功能：
-#   1. 等待 PostgreSQL 数据库就绪
-#   2. 自动执行数据库迁移（alembic upgrade head）
+#   1. 等待 PostgreSQL 数据库就绪（仅当启动应用时）
+#   2. 自动执行数据库迁移（仅当启动应用时）
 #   3. 启动应用服务
 #
 # 环境变量：
@@ -41,46 +41,76 @@ POSTGRES_HOST="${POSTGRES_HOST:-postgres}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 SKIP_MIGRATION="${SKIP_MIGRATION:-false}"
 
-# =============================================================================
-# 等待 PostgreSQL 就绪
-# =============================================================================
-
-log_info "Waiting for PostgreSQL at ${POSTGRES_HOST}:${POSTGRES_PORT}..."
-
-# 使用 pg_isready 检测 PostgreSQL 是否就绪
-MAX_RETRIES=30
-RETRY_INTERVAL=2
-
-for i in $(seq 1 $MAX_RETRIES); do
-    if pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "${POSTGRES_USER:-scryer}" -q 2>/dev/null; then
-        log_info "PostgreSQL is ready!"
-        break
+# 检查是否应该运行数据库操作
+# 只有在启动应用服务时才等待数据库和运行迁移
+should_run_db_operations() {
+    # 如果没有提供命令，不运行数据库操作
+    if [ $# -eq 0 ]; then
+        return 1
     fi
 
-    if [ $i -eq $MAX_RETRIES ]; then
-        log_error "PostgreSQL did not become ready in time"
-        exit 1
-    fi
+    # 获取第一个参数（命令）
+    local cmd="$1"
 
-    log_warn "Waiting for PostgreSQL... ($i/$MAX_RETRIES)"
-    sleep $RETRY_INTERVAL
-done
+    # 检查是否是应用启动命令
+    case "$cmd" in
+        uvicorn|gunicorn|start.sh|run-server)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
 
 # =============================================================================
-# 执行数据库迁移
+# 等待 PostgreSQL 就绪（仅当启动应用时）
 # =============================================================================
 
-if [ "$SKIP_MIGRATION" = "true" ]; then
-    log_warn "SKIP_MIGRATION=true, skipping database migrations"
+if should_run_db_operations "$@"; then
+    log_info "Waiting for PostgreSQL at ${POSTGRES_HOST}:${POSTGRES_PORT}..."
+
+    # 使用 pg_isready 检测 PostgreSQL 是否就绪
+    MAX_RETRIES=30
+    RETRY_INTERVAL=2
+
+    for i in $(seq 1 $MAX_RETRIES); do
+        if pg_isready -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "${POSTGRES_USER:-scryer}" -q 2>/dev/null; then
+            log_info "PostgreSQL is ready!"
+            break
+        fi
+
+        if [ $i -eq $MAX_RETRIES ]; then
+            log_error "PostgreSQL did not become ready in time"
+            exit 1
+        fi
+
+        log_warn "Waiting for PostgreSQL... ($i/$MAX_RETRIES)"
+        sleep $RETRY_INTERVAL
+    done
 else
-    log_info "Running database migrations..."
+    log_info "Skipping database wait (not starting application)"
+fi
 
-    if alembic upgrade head; then
-        log_info "Database migrations completed successfully"
+# =============================================================================
+# 执行数据库迁移（仅当启动应用时）
+# =============================================================================
+
+if should_run_db_operations "$@"; then
+    if [ "$SKIP_MIGRATION" = "true" ]; then
+        log_warn "SKIP_MIGRATION=true, skipping database migrations"
     else
-        log_error "Database migration failed"
-        exit 1
+        log_info "Running database migrations..."
+
+        if alembic upgrade head; then
+            log_info "Database migrations completed successfully"
+        else
+            log_error "Database migration failed"
+            exit 1
+        fi
     fi
+else
+    log_info "Skipping database migrations (not starting application)"
 fi
 
 # =============================================================================
