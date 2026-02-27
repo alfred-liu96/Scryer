@@ -1,0 +1,22 @@
+# Gitleaks 配置文件
+# 用于排除测试文件中的假阳性检测
+
+[allowlist]
+description = "排除测试文件和模拟数据"
+paths = [
+  '''tests\/''',
+  '''test_.*\.py''',
+  '''.*\.test\.py''',
+  '''__tests__\/''',
+]
+
+[allowlist.keywords]
+# 排除测试中常见的模拟关键词
+keywords = [
+  "invalid",
+  "test",
+  "mock",
+  "fake",
+  "example",
+  "sample",
+]
