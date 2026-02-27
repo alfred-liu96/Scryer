@@ -158,6 +158,95 @@ sudo chown -R $USER:$USER .
 - **持久化依赖**：命名卷避免重复安装
 - **终端保持**：`tty: true` 和 `stdin_open: true` 支持交互式操作
 
+## Alembic 数据库迁移
+
+### 自动迁移（推荐）
+
+容器启动时会自动执行数据库迁移（`alembic upgrade head`）：
+
+```bash
+# 启动容器（自动执行迁移）
+docker-compose up -d
+
+# 查看迁移日志
+docker-compose logs scryer-dev
+```
+
+### 手动迁移
+
+如果需要跳过自动迁移或手动执行：
+
+```bash
+# 1. 跳过自动迁移启动容器
+docker-compose up -d
+SKIP_MIGRATION=true docker-compose up -d
+
+# 2. 进入容器
+docker-compose exec scryer-dev /bin/bash
+
+# 3. 手动执行迁移
+alembic upgrade head
+
+# 4. 查看当前版本
+alembic current
+
+# 5. 查看迁移历史
+alembic history
+```
+
+### 降级数据库
+
+```bash
+# 进入容器
+docker-compose exec scryer-dev /bin/bash
+
+# 降级到基础版本（删除所有表）
+alembic downgrade base
+
+# 降级到指定版本
+alembic downgrade <revision_id>
+```
+
+### 迁移环境变量
+
+控制迁移行为的环境变量：
+
+| 环境变量 | 默认值 | 说明 |
+|---------|-------|------|
+| `SKIP_MIGRATION` | `false` | 跳过自动迁移 |
+| `POSTGRES_HOST` | `postgres` | PostgreSQL 主机 |
+| `POSTGRES_PORT` | `5432` | PostgreSQL 端口 |
+
+### 迁移故障排查
+
+**迁移失败：**
+
+```bash
+# 查看详细错误日志
+docker-compose logs scryer-dev | grep -i migration
+
+# 检查数据库连接
+docker-compose exec scryer-dev pg_isready -h postgres -U scryer
+
+# 手动重试迁移
+docker-compose exec scryer-dev alembic upgrade head
+```
+
+**数据库未就绪：**
+
+容器会自动等待 PostgreSQL 就绪（最多 60 秒）。如果超时：
+
+```bash
+# 检查 PostgreSQL 容器状态
+docker-compose ps postgres
+
+# 查看 PostgreSQL 日志
+docker-compose logs postgres
+
+# 使用 wait-for-postgres.sh 手动检测
+docker-compose exec scryer-dev wait-for-postgres.sh postgres 5432 60
+```
+
 ## 未来扩展
 
 ### 多阶段构建

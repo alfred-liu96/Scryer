@@ -77,10 +77,18 @@ services:
         condition: service_healthy
     # 环境变量：覆盖 .env 中的连接字符串，使用 Docker 网络内部 DNS
     environment:
+      # PostgreSQL 连接信息
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-scryer}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-scryer}
       # 覆盖 DATABASE_URL，将 localhost 替换为 postgres 服务名
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-scryer}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-scryer}
       # 覆盖 REDIS_URL，将 localhost 替换为 redis 服务名
       - REDIS_URL=redis://redis:6379/0
+      # Alembic 迁移配置
+      - SKIP_MIGRATION=${SKIP_MIGRATION:-false}
     # 从 .env 文件加载环境变量
     env_file:
       - .env

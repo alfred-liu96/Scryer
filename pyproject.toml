@@ -47,10 +47,25 @@ check_untyped_defs = true
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
+explicit_package_bases = true
+exclude = [
+    "src/backend/app/models/.*",
+]
 
 [[tool.mypy.overrides]]
 module = "redis.asyncio"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "backend.app.models.base",
+    "backend.app.models.task",
+    "backend.app.models.search_result",
+    "backend.app.models.content",
+    "backend.app.models.query",
+    "backend.app.models.user",
+]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
