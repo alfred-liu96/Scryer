@@ -13,17 +13,23 @@ from __future__ import annotations
 import asyncio
 import os
 
-# 类型提示导入
-from typing import TYPE_CHECKING, Any, AsyncGenerator
-from urllib.parse import urlparse
+# 在所有测试运行前设置必要的环境变量（至少 32 字符）
+os.environ.setdefault("JWT_SECRET_KEY", "test_jwt_secret_key_with_32_characters!!")
+os.environ.setdefault("JWT_ALGORITHM", "HS256")
+os.environ.setdefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "30")
+os.environ.setdefault("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "7")
 
-import asyncpg
-import pytest
-import pytest_asyncio
-from redis.asyncio import ConnectionPool as AsyncConnectionPool
-from redis.asyncio import Redis as AsyncRedis
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import (
+# 类型提示导入  # noqa: E402
+from typing import TYPE_CHECKING, Any, AsyncGenerator  # noqa: E402
+from urllib.parse import urlparse  # noqa: E402
+
+import asyncpg  # noqa: E402
+import pytest  # noqa: E402
+import pytest_asyncio  # noqa: E402
+from redis.asyncio import ConnectionPool as AsyncConnectionPool  # noqa: E402
+from redis.asyncio import Redis as AsyncRedis  # noqa: E402
+from sqlalchemy import text  # noqa: E402
+from sqlalchemy.ext.asyncio import (  # noqa: E402
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
