@@ -86,6 +86,11 @@ def create_app() -> FastAPI:
 
     app.add_middleware(RequestIDMiddleware)
 
+    # 注册 AuthMiddleware（认证异常处理）
+    from .middleware.auth import AuthMiddleware
+
+    app.add_middleware(AuthMiddleware)
+
     # 配置 CORS 中间件
     app.add_middleware(
         CORSMiddleware,
