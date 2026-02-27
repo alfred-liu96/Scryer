@@ -1,0 +1,170 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`MobileMenu Component (Contract) Snapshot Contract should match snapshot when closed 1`] = `
+<div
+  class="mobile-menu-container"
+>
+  <button
+    aria-expanded="false"
+    aria-label="Open menu"
+    class="mobile-menu-toggle"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="w-6 h-6"
+      data-slot="icon"
+      data-testid="hamburger-icon"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  </button>
+</div>
+`;
+
+exports[`MobileMenu Component (Contract) Snapshot Contract should match snapshot when open 1`] = `
+<div
+  class="mobile-menu-container"
+>
+  <button
+    aria-expanded="true"
+    aria-label="Close menu"
+    class="mobile-menu-toggle"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="w-6 h-6"
+      data-slot="icon"
+      data-testid="close-icon"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M6 18 18 6M6 6l12 12"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  </button>
+  <nav
+    aria-label="Mobile menu"
+    class="mobile-menu open animate-in position-left"
+    role="navigation"
+    style="transition-duration: 300ms;"
+    tabindex="-1"
+  >
+    <a
+      class="mobile-menu-item"
+      href="/"
+    >
+      <span
+        class="mobile-menu-label"
+      >
+        Home
+      </span>
+    </a>
+    <a
+      class="mobile-menu-item"
+      href="/tasks"
+    >
+      <span
+        class="mobile-menu-label"
+      >
+        Tasks
+      </span>
+    </a>
+    <a
+      class="mobile-menu-item"
+      href="/settings"
+    >
+      <span
+        class="mobile-menu-label"
+      >
+        Settings
+      </span>
+    </a>
+  </nav>
+</div>
+`;
+
+exports[`MobileMenu Component (Contract) Snapshot Contract should match snapshot with custom position 1`] = `
+<div
+  class="mobile-menu-container"
+>
+  <button
+    aria-expanded="true"
+    aria-label="Close menu"
+    class="mobile-menu-toggle"
+    type="button"
+  >
+    <svg
+      aria-hidden="true"
+      class="w-6 h-6"
+      data-slot="icon"
+      data-testid="close-icon"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M6 18 18 6M6 6l12 12"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+  </button>
+  <nav
+    aria-label="Mobile menu"
+    class="mobile-menu open animate-in position-right"
+    role="navigation"
+    style="transition-duration: 300ms;"
+    tabindex="-1"
+  >
+    <a
+      class="mobile-menu-item"
+      href="/"
+    >
+      <span
+        class="mobile-menu-label"
+      >
+        Home
+      </span>
+    </a>
+    <a
+      class="mobile-menu-item"
+      href="/tasks"
+    >
+      <span
+        class="mobile-menu-label"
+      >
+        Tasks
+      </span>
+    </a>
+    <a
+      class="mobile-menu-item"
+      href="/settings"
+    >
+      <span
+        class="mobile-menu-label"
+      >
+        Settings
+      </span>
+    </a>
+  </nav>
+</div>
+`;

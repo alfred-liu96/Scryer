@@ -1,0 +1,272 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`PageSkeleton Component (Contract) Snapshot Contract should match snapshot for card variant 1`] = `
+<div
+  aria-label="Loading content..."
+  aria-live="polite"
+  class="page-skeleton responsive grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 skeleton-slate skeleton-medium animate-shimmer animation-normal"
+  role="status"
+>
+  <div
+    class="contents"
+  >
+    <div
+      class="skeleton-card"
+    >
+      <div
+        class="skeleton-card-header"
+      />
+      <div
+        class="skeleton-card-body"
+      >
+        <div
+          class="skeleton-card-line"
+        />
+        <div
+          class="skeleton-card-line"
+        />
+        <div
+          class="skeleton-card-line"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-card"
+    >
+      <div
+        class="skeleton-card-header"
+      />
+      <div
+        class="skeleton-card-body"
+      >
+        <div
+          class="skeleton-card-line"
+        />
+        <div
+          class="skeleton-card-line"
+        />
+        <div
+          class="skeleton-card-line"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-card"
+    >
+      <div
+        class="skeleton-card-header"
+      />
+      <div
+        class="skeleton-card-body"
+      >
+        <div
+          class="skeleton-card-line"
+        />
+        <div
+          class="skeleton-card-line"
+        />
+        <div
+          class="skeleton-card-line"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-card"
+    >
+      <div
+        class="skeleton-card-header"
+      />
+      <div
+        class="skeleton-card-body"
+      >
+        <div
+          class="skeleton-card-line"
+        />
+        <div
+          class="skeleton-card-line"
+        />
+        <div
+          class="skeleton-card-line"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PageSkeleton Component (Contract) Snapshot Contract should match snapshot for default variant 1`] = `
+<div
+  aria-label="Loading content..."
+  aria-live="polite"
+  class="page-skeleton responsive skeleton-default skeleton-slate skeleton-medium animate-shimmer animation-normal"
+  role="status"
+>
+  <div
+    class="skeleton-default-content"
+  >
+    <div
+      class="skeleton-title"
+    />
+    <div
+      class="skeleton-description"
+    />
+    <div
+      class="skeleton-content"
+    >
+      <div
+        class="skeleton-content-line"
+      />
+      <div
+        class="skeleton-content-line"
+      />
+      <div
+        class="skeleton-content-line"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PageSkeleton Component (Contract) Snapshot Contract should match snapshot for list variant 1`] = `
+<div
+  aria-label="Loading content..."
+  aria-live="polite"
+  class="page-skeleton responsive skeleton-list skeleton-slate skeleton-medium animate-shimmer animation-normal"
+  role="status"
+>
+  <div
+    class="skeleton-list-item"
+  >
+    <div
+      class="skeleton-item-content"
+    >
+      <div
+        class="skeleton-item-title"
+      />
+      <div
+        class="skeleton-item-description"
+      />
+    </div>
+  </div>
+  <div
+    class="skeleton-list-item"
+  >
+    <div
+      class="skeleton-item-content"
+    >
+      <div
+        class="skeleton-item-title"
+      />
+      <div
+        class="skeleton-item-description"
+      />
+    </div>
+  </div>
+  <div
+    class="skeleton-list-item"
+  >
+    <div
+      class="skeleton-item-content"
+    >
+      <div
+        class="skeleton-item-title"
+      />
+      <div
+        class="skeleton-item-description"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PageSkeleton Component (Contract) Snapshot Contract should match snapshot for text variant 1`] = `
+<div
+  aria-label="Loading content..."
+  aria-live="polite"
+  class="page-skeleton responsive skeleton-text skeleton-slate skeleton-medium animate-shimmer animation-normal"
+  role="status"
+>
+  <div
+    class="skeleton-text-line w-full"
+  />
+  <div
+    class="skeleton-text-line w-1/2"
+  />
+  <div
+    class="skeleton-text-line w-1/2"
+  />
+  <div
+    class="skeleton-text-line w-1/2"
+  />
+  <div
+    class="skeleton-text-line w-3/4"
+  />
+</div>
+`;
+
+exports[`PageSkeleton Component (Contract) Snapshot Contract should match snapshot with custom styling 1`] = `
+<div
+  aria-label="Loading content..."
+  aria-live="polite"
+  class="page-skeleton responsive skeleton-default skeleton-gray skeleton-medium animate-shimmer animation-normal custom-class"
+  role="status"
+  style="width: 300px;"
+>
+  <div
+    class="skeleton-default-content"
+  >
+    <div
+      class="skeleton-title"
+    />
+    <div
+      class="skeleton-description"
+    />
+    <div
+      class="skeleton-content"
+    >
+      <div
+        class="skeleton-content-line"
+      />
+      <div
+        class="skeleton-content-line"
+      />
+      <div
+        class="skeleton-content-line"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`PageSkeleton Component (Contract) Snapshot Contract should match snapshot with pulse animation 1`] = `
+<div
+  aria-label="Loading content..."
+  aria-live="polite"
+  class="page-skeleton responsive skeleton-default skeleton-slate skeleton-medium animate-pulse animation-normal"
+  role="status"
+>
+  <div
+    class="skeleton-default-content"
+  >
+    <div
+      class="skeleton-title"
+    />
+    <div
+      class="skeleton-description"
+    />
+    <div
+      class="skeleton-content"
+    >
+      <div
+        class="skeleton-content-line"
+      />
+      <div
+        class="skeleton-content-line"
+      />
+      <div
+        class="skeleton-content-line"
+      />
+    </div>
+  </div>
+</div>
+`;

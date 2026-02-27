@@ -1,0 +1,45 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Header Component Snapshot should match snapshot with all props 1`] = `
+<header
+  class="header"
+>
+  <div
+    class="header-logo"
+  >
+    <div>
+      Logo
+    </div>
+  </div>
+  <nav
+    class="header-nav"
+  >
+    <nav>
+      Nav
+    </nav>
+  </nav>
+  <div
+    class="header-actions"
+  >
+    <div>
+      Actions
+    </div>
+  </div>
+</header>
+`;
+
+exports[`Header Component Snapshot should match snapshot without props 1`] = `
+<header
+  class="header"
+>
+  <div
+    class="header-logo"
+  />
+  <nav
+    class="header-nav"
+  />
+  <div
+    class="header-actions"
+  />
+</header>
+`;

@@ -1,0 +1,82 @@
+# 测试依赖清单
+
+## 必需依赖 (Required)
+
+这些依赖需要安装才能运行测试：
+
+```bash
+npm install --save-dev \
+  jest@^29.7.0 \
+  @jest/globals@^29.7.0 \
+  @testing-library/react@^14.1.2 \
+  @testing-library/jest-dom@^6.1.5 \
+  @testing-library/user-event@^14.5.1 \
+  @swc/jest@^0.2.29 \
+  jest-environment-jsdom@^29.7.0 \
+  identity-obj-proxy@^3.0.1
+```
+
+## 依赖说明
+
+### 核心测试框架
+- `jest`: JavaScript 测试框架
+- `@jest/globals`: Jest 全局类型定义
+- `jest-environment-jsdom`: JSDOM 测试环境
+
+### React 测试工具
+- `@testing-library/react`: React 组件测试库
+- `@testing-library/jest-dom`: 自定义 Jest 匹配器
+- `@testing-library/user-event`: 模拟用户交互
+
+### SWC 集成
+- `@swc/jest`: 使用 SWC 转换 TypeScript/JSX（比 Babel 更快）
+
+### Mock 工具
+- `identity-obj-proxy`: CSS 模块 mock
+
+## 可选依赖 (Optional)
+
+如果需要增强功能，可以安装：
+
+```bash
+npm install --save-dev \
+  @testing-library/react-hooks@^8.0.1 \
+  @testing-library/dom@^9.3.3 \
+  msw@^2.0.0 \
+  @jest/types@^29.6.3
+```
+
+## 完整的 package.json 更新
+
+安装完依赖后，package.json 应该包含以下 devDependencies：
+
+```json
+{
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@swc/jest": "^0.2.29",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/user-event": "^14.5.1",
+    "identity-obj-proxy": "^3.0.1",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  }
+}
+```
+
+## 安装命令
+
+一键安装所有测试依赖：
+
+```bash
+npm install --save-dev \
+  jest@^29.7.0 \
+  @jest/globals@^29.7.0 \
+  @testing-library/react@^14.1.2 \
+  @testing-library/jest-dom@^6.1.5 \
+  @testing-library/user-event@^14.5.1 \
+  @swc/jest@^0.2.29 \
+  jest-environment-jsdom@^29.7.0 \
+  identity-obj-proxy@^3.0.1
+```
