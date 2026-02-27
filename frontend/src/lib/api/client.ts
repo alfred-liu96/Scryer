@@ -641,3 +641,34 @@ export class HttpClient {
 
 // 默认客户端实例
 export const apiClient = new HttpClient();
+
+// ============================================================================
+// 配置 onRefreshFailure 回调（集成 AuthClient）
+// ============================================================================
+
+/**
+ * 动态导入 AuthClient 并配置回调
+ *
+ * 注意：使用 require() 避免循环依赖
+ * AuthClient 依赖 HttpClient，HttpClient 需要 AuthClient 的 logout()
+ */
+const setupRefreshFailureCallback = () => {
+  try {
+    // 动态导入（运行时执行）
+    const { authClient } = require('./auth-client');
+
+    // 配置 onRefreshFailure 回调
+    apiClient.onRefreshFailure = (error: Error) => {
+      console.error('Token refresh failed:', error);
+
+      // 调用 AuthClient 的统一登出逻辑
+      // silent: true 表示不调用后端登出端点（仅清除本地状态）
+      authClient.logout({ silent: true, clearLocalState: true });
+    };
+  } catch (error) {
+    console.error('Failed to setup refresh failure callback:', error);
+  }
+};
+
+// 初始化回调
+setupRefreshFailureCallback();
