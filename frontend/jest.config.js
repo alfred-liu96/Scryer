@@ -17,12 +17,14 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
 
   // 模块路径别名（与 tsconfig.json 保持一致）
+  // 注意：更具体的路径要放在更通用的路径之前
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@/hooks/(.*)$': '<rootDir>/src/lib/hooks/$1',
     '^@/components/(.*)$': '<rootDir>/src/components/$1',
     '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
     '^@/types/(.*)$': '<rootDir>/src/types/$1',
     '^@/app/(.*)$': '<rootDir>/src/app/$1',
+    '^@/(.*)$': '<rootDir>/src/$1',
 
     // CSS 模块 mock
     '.*\\.module\\.(css|sass|scss)$': 'identity-obj-proxy',
