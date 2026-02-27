@@ -12,7 +12,7 @@ from ...core.exceptions import ConflictError
 from ...core.security import SecurityService
 from ...models.user import User
 from ...repositories.user import UserRepository
-from ...schemas.auth import LoginRequest, RegisterRequest, UserResponse
+from ...schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, UserResponse
 from ...services.auth import AuthService, TokenResponse
 from ..deps import (
     get_auth_service,
@@ -190,6 +190,97 @@ async def login(
         user=UserResponse.model_validate(user),
         tokens=auth_response.tokens,
     )
+
+
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    status_code=status.HTTP_200_OK,
+    summary="刷新访问 Token",
+    description="使用有效的 refresh_token 获取新的 access_token 和 refresh_token",
+    responses={
+        200: {
+            "description": "Token 刷新成功",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                        "token_type": "Bearer",
+                        "expires_in": 1800,
+                    }
+                }
+            },
+        },
+        401: {
+            "description": "refresh_token 无效或已过期",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid_token": {
+                            "summary": "Token 无效",
+                            "value": {
+                                "detail": "Invalid token: signature failed",
+                                "token_type": "refresh",
+                            },
+                        },
+                        "expired_token": {
+                            "summary": "Token 已过期",
+                            "value": {
+                                "detail": "Token has expired",
+                                "token_type": "refresh",
+                                "expired_at": "2026-02-27T10:30:00Z",
+                            },
+                        },
+                    }
+                }
+            },
+        },
+        422: {
+            "description": "请求体验证失败",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Validation error",
+                        "errors": [
+                            {
+                                "loc": ["body", "refresh_token"],
+                                "msg": "field required",
+                                "type": "value_error.missing",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+    },
+)
+async def refresh_tokens(
+    request: RefreshRequest, auth_service: AuthService = Depends(get_auth_service)
+) -> TokenResponse:
+    """Token 刷新端点
+
+    业务逻辑：
+    1. 验证请求体（Pydantic 自动验证）
+    2. 调用 AuthService.refresh_tokens() 验证并刷新 Token
+    3. 返回新的 Token 对（包含新的 access_token 和 refresh_token）
+    4. 异常由全局异常处理器统一处理
+
+    Args:
+        request: 刷新请求对象，包含 refresh_token
+        auth_service: 认证服务（依赖注入）
+
+    Returns:
+        TokenResponse: 新的 Token 对
+
+    Raises:
+        InvalidTokenError: refresh_token 无效（由全局异常处理器处理）
+        TokenExpiredError: refresh_token 已过期（由全局异常处理器处理）
+    """
+    # 调用认证服务刷新 Token
+    tokens = auth_service.refresh_tokens(request.refresh_token)
+
+    return tokens
 
 
 @router.get(
