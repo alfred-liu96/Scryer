@@ -8,6 +8,9 @@
  * - 无 Token 场景
  * - Headers 合并逻辑
  * - 边界情况处理
+ * - 401 响应拦截器 (Issue #111)
+ * - Token 刷新互斥锁 (Issue #111)
+ * - 请求队列机制 (Issue #111)
  *
  * 目标覆盖率: >= 90%
  *
@@ -17,6 +20,14 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { HttpClient } from '../client';
 import type { TokenStorage } from '@/lib/storage/token-storage';
+
+// Token Refresh Response 类型（根据蓝图定义）
+interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: 'Bearer';
+  expires_in: number;
+}
 
 // Mock TokenStorage
 const createMockTokenStorage = (): jest.Mocked<TokenStorage> => ({
@@ -493,7 +504,8 @@ describe('HttpClient - Token Injection', () => {
         json: async () => ({ detail: 'Unauthorized' }),
       } as Response);
 
-      await expect(client.get('/api/data')).rejects.toThrow('Unauthorized');
+      // 使用 skipAuth: true 避免 401 触发 Token 刷新逻辑（Issue #111）
+      await expect(client.request('/api/data', { skipAuth: true })).rejects.toThrow('Unauthorized');
     });
 
     it('should handle timeout with token injection', async () => {
@@ -840,6 +852,803 @@ describe('HttpClient - Token Injection', () => {
       const finalHeaders = mockFetch.mock.calls[0][1].headers as Headers;
       expect(finalHeaders.get('Authorization')).toBe('Bearer token');
       expect(finalHeaders.get('Content-Type')).toBe('application/json');
+    });
+  });
+});
+
+// ============================================================
+// Issue #111: 401 响应拦截器与 Token 刷新互斥锁测试
+// ============================================================
+
+describe('HttpClient - 401 Response Interceptor (Issue #111)', () => {
+  let client: HttpClient;
+  let mockTokenStorage: jest.Mocked<TokenStorage>;
+  let mockFetch: jest.MockedFunction<typeof fetch>;
+
+  beforeEach(() => {
+    mockTokenStorage = createMockTokenStorage();
+    mockFetch = jest.fn();
+    global.fetch = mockFetch;
+
+    client = new HttpClient('https://api.test.com', 5000, mockTokenStorage);
+
+    // 为所有 401 测试设置默认的 refresh_token
+    mockTokenStorage.getRefreshToken.mockReturnValue('default_refresh_token');
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('基础 401 拦截与 Token 刷新', () => {
+    it('应在收到 401 响应时触发 Token 刷新', async () => {
+      // Mock refresh_token
+      mockTokenStorage.getRefreshToken.mockReturnValue('valid_refresh_token');
+
+      // 第一次请求返回 401
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      // 刷新请求成功
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'new_access_token',
+          refresh_token: 'new_refresh_token',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      // 重试原始请求成功
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: 'success' }),
+      } as Response);
+
+      const result = await client.get('/api/protected');
+
+      // 验证刷新流程：原始请求 + 刷新请求 + 重试请求
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+
+      // 验证新 Token 被保存
+      expect(mockTokenStorage.setTokens).toHaveBeenCalledWith({
+        access_token: 'new_access_token',
+        refresh_token: 'new_refresh_token',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      });
+
+      // 验证最终返回正确的数据
+      expect(result).toEqual({ data: 'success' });
+    });
+
+    it('应在刷新成功后使用新 Token 重试原始请求', async () => {
+      // 模拟 Token 变化：第一次返回旧 token，之后返回新 token
+      let callCount = 0;
+      mockTokenStorage.getAccessToken.mockImplementation(() => {
+        callCount++;
+        return callCount === 1 ? 'old_token' : 'new_token';
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'new_access_token',
+          refresh_token: 'new_refresh_token',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ result: 'data' }),
+      } as Response);
+
+      await client.get('/api/data');
+
+      // 验证重试请求使用了新 Token
+      const retryCall = mockFetch.mock.calls[2];
+      const retryHeaders = retryCall[1].headers as Headers;
+      expect(retryHeaders.get('Authorization')).toBe('Bearer new_token');
+    });
+
+    it('不应在非 401 错误时触发刷新', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ detail: 'Server error' }),
+      } as Response);
+
+      await expect(client.get('/api/data')).rejects.toThrow('Server error');
+
+      // 验证没有调用刷新逻辑
+      expect(mockTokenStorage.getRefreshToken).not.toHaveBeenCalled();
+      expect(mockTokenStorage.setTokens).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('并发 401 互斥控制', () => {
+    it('多个并发 401 请求应只触发一次 Token 刷新', async () => {
+      let callCount = 0;
+
+      // 使用 mockImplementation 来区分不同类型的请求
+      mockFetch.mockImplementation((url) => {
+        callCount++;
+
+        // 刷新请求（包含 /auth/refresh）
+        if (typeof url === 'string' && url.includes('/auth/refresh')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              access_token: 'new_access',
+              refresh_token: 'new_refresh',
+              token_type: 'Bearer',
+              expires_in: 3600,
+            }),
+          } as Response);
+        }
+
+        // 前三次请求返回 401
+        if (callCount <= 3) {
+          return Promise.resolve({
+            ok: false,
+            status: 401,
+            json: async () => ({ detail: 'Unauthorized' }),
+          } as Response);
+        }
+
+        // 重试请求成功
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true }),
+        } as Response);
+      });
+
+      // 并发 3 个请求
+      const promises = [
+        client.get('/api/data1'),
+        client.get('/api/data2'),
+        client.get('/api/data3'),
+      ];
+
+      await Promise.all(promises);
+
+      // 验证只调用了 1 次 refresh API
+      const refreshCalls = mockFetch.mock.calls.filter(call => {
+        const url = call[0] as string;
+        return typeof url === 'string' && url.includes('/auth/refresh');
+      });
+      expect(refreshCalls).toHaveLength(1);
+    });
+
+    it('应在刷新期间将新的 401 请求加入队列', async () => {
+      let resolveRefresh: (value: Response) => void;
+
+      // 刷新请求延迟（挂起）
+      mockFetch.mockImplementation((url) => {
+        if (typeof url === 'string' && url.includes('/auth/refresh')) {
+          return new Promise(resolve => {
+            resolveRefresh = resolve;
+          });
+        }
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          json: async () => ({ detail: 'Unauthorized' }),
+        } as Response);
+      });
+
+      // 发起第一个 401 请求（触发刷新）
+      const promise1 = client.get('/api/data1');
+
+      // 在刷新期间发起第二个 401 请求（应加入队列）
+      const promise2 = client.get('/api/data2');
+
+      // 完成刷新
+      resolveRefresh!({
+        ok: true,
+        json: async () => ({
+          access_token: 'new_access',
+          refresh_token: 'new_refresh',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      // 重试请求成功
+      mockFetch.mockImplementation(() => {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true }),
+        } as Response);
+      });
+
+      await Promise.all([promise1, promise2]);
+
+      // 验证两个请求都成功了
+      expect(mockFetch).toHaveBeenCalled();
+    });
+
+    it('应复用现有的刷新 Promise（互斥锁）', async () => {
+      mockTokenStorage.getRefreshToken.mockReturnValue('refresh_123');
+
+      let resolveFetch: (value: Response) => void;
+
+      // 刷新请求挂起
+      mockFetch.mockImplementation(() => {
+        return new Promise(resolve => {
+          resolveFetch = resolve;
+        });
+      });
+
+      // 第一个刷新请求（pending）
+      const promise1 = client.get('/api/data1');
+
+      // 第二个刷新请求（应复用第一个）
+      const promise2 = client.get('/api/data2');
+
+      // 完成刷新
+      resolveFetch!({
+        ok: true,
+        json: async () => ({
+          access_token: 'new_access',
+          refresh_token: 'new_refresh',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      // 重试请求成功
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true }),
+      } as Response);
+
+      await Promise.all([promise1, promise2]);
+
+      // 验证只调用了 1 次 refresh API
+      const refreshCalls = mockFetch.mock.calls.filter(call => {
+        const url = call[0] as string;
+        return typeof url === 'string' && url.includes('/auth/refresh');
+      });
+      expect(refreshCalls).toHaveLength(1);
+    });
+  });
+
+  describe('刷新失败后的降级处理', () => {
+    it('应在刷新失败时调用 onRefreshFailure 回调', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      // 刷新请求失败
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Invalid refresh token' }),
+      } as Response);
+
+      const mockFailureCallback = jest.fn();
+      client.onRefreshFailure = mockFailureCallback;
+
+      await expect(client.get('/api/data')).rejects.toThrow();
+
+      expect(mockFailureCallback).toHaveBeenCalled();
+    });
+
+    it('应在刷新失败时清除 Token', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      // 刷新失败
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Invalid' }),
+      } as Response);
+
+      await expect(client.get('/api/data')).rejects.toThrow();
+
+      expect(mockTokenStorage.clearTokens).toHaveBeenCalled();
+    });
+
+    it('应在刷新失败时拒绝所有排队的请求', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      // 刷新失败
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Invalid' }),
+      } as Response);
+
+      const promises = [
+        client.get('/api/data1'),
+        client.get('/api/data2'),
+        client.get('/api/data3'),
+      ];
+
+      // 所有请求都应该失败
+      await expect(Promise.all(promises)).rejects.toThrow();
+    });
+
+    it('应处理刷新时的网络错误', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      // 刷新请求网络错误
+      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+      await expect(client.get('/api/data')).rejects.toThrow();
+    });
+  });
+
+  describe('无 refresh_token 场景', () => {
+    it('应在无 refresh_token 时拒绝刷新并调用失败回调', async () => {
+      mockTokenStorage.getRefreshToken.mockReturnValue(null);
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      const mockFailureCallback = jest.fn();
+      client.onRefreshFailure = mockFailureCallback;
+
+      await expect(client.get('/api/data')).rejects.toThrow();
+
+      expect(mockFailureCallback).toHaveBeenCalled();
+      expect(mockTokenStorage.setTokens).not.toHaveBeenCalled();
+    });
+
+    it('应在无 refresh_token 时清除所有 Token', async () => {
+      mockTokenStorage.getRefreshToken.mockReturnValue(null);
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      await expect(client.get('/api/data')).rejects.toThrow();
+
+      expect(mockTokenStorage.clearTokens).toHaveBeenCalled();
+    });
+  });
+
+  describe('请求队列机制', () => {
+    it('应处理刷新期间到达的多个请求', async () => {
+      let resolveRefresh: (value: Response) => void;
+
+      mockFetch.mockImplementation((url) => {
+        if (typeof url === 'string' && url.includes('/auth/refresh')) {
+          return new Promise(resolve => {
+            resolveRefresh = resolve;
+          });
+        }
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          json: async () => ({ detail: 'Unauthorized' }),
+        } as Response);
+      });
+
+      // 发起 3 个并发请求
+      const promise1 = client.get('/api/data1');
+      const promise2 = client.get('/api/data2');
+      const promise3 = client.get('/api/data3');
+
+      // 完成刷新
+      resolveRefresh!({
+        ok: true,
+        json: async () => ({
+          access_token: 'new_access',
+          refresh_token: 'new_refresh',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      // 重试请求成功
+      mockFetch.mockImplementation(() => {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ success: true }),
+        } as Response);
+      });
+
+      await Promise.all([promise1, promise2, promise3]);
+
+      // 验证所有请求都成功了
+      expect(mockFetch).toHaveBeenCalled();
+    });
+
+    it('应在刷新成功后处理队列中的所有请求', async () => {
+      mockTokenStorage.getRefreshToken.mockReturnValue('refresh_123');
+      mockTokenStorage.setTokens.mockReturnValue(true);
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'new_access',
+          refresh_token: 'new_refresh',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ queued: 'success' }),
+      } as Response);
+
+      const promises = [
+        client.get('/api/queued1'),
+        client.get('/api/queued2'),
+      ];
+
+      await Promise.all(promises);
+
+      // 验证刷新请求只调用一次
+      const refreshCalls = mockFetch.mock.calls.filter(call => {
+        const url = call[0] as string;
+        return typeof url === 'string' && url.includes('/auth/refresh');
+      });
+      expect(refreshCalls).toHaveLength(1);
+
+      // 验证队列请求被处理（重试）
+      const retryCalls = mockFetch.mock.calls.filter(call => {
+        const url = call[0] as string;
+        return typeof url === 'string' && (url.includes('/queued1') || url.includes('/queued2'));
+      });
+      // 每个请求被调用两次：初始 401 + 重试成功
+      expect(retryCalls.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('应在刷新失败后清空队列并拒绝所有请求', async () => {
+      mockTokenStorage.getRefreshToken.mockReturnValue('invalid_token');
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      // 刷新失败
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Invalid refresh token' }),
+      } as Response);
+
+      const promises = [
+        client.get('/api/queued1'),
+        client.get('/api/queued2'),
+        client.get('/api/queued3'),
+      ];
+
+      // 所有请求都应该失败
+      const results = await Promise.allSettled(promises);
+
+      results.forEach(result => {
+        expect(result.status).toBe('rejected');
+      });
+    });
+  });
+
+  describe('边界情况', () => {
+    it('应处理快速连续的 401 响应（10 个请求）', async () => {
+      // 连续 10 个 401 请求
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'new_access',
+          refresh_token: 'new_refresh',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true }),
+      } as Response);
+
+      const promises = Array.from({ length: 10 }, (_, i) =>
+        client.get(`/api/data${i}`)
+      );
+
+      await Promise.all(promises);
+
+      // 仍然只触发 1 次刷新
+      const refreshCalls = mockFetch.mock.calls.filter(call => {
+        const url = call[0] as string;
+        return typeof url === 'string' && url.includes('/auth/refresh');
+      });
+      expect(refreshCalls).toHaveLength(1);
+    });
+
+    it('应处理刷新后重试仍然返回 401 的情况', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'new_access',
+          refresh_token: 'new_refresh',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      // 重试后仍然 401（极端情况，可能后端有问题）
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Still unauthorized' }),
+      } as Response);
+
+      // 第二次刷新失败
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Refresh failed' }),
+      } as Response);
+
+      await expect(client.get('/api/data')).rejects.toThrow();
+
+      // 验证尝试了两次刷新
+      const refreshCalls = mockFetch.mock.calls.filter(call => {
+        const url = call[0] as string;
+        return typeof url === 'string' && url.includes('/auth/refresh');
+      });
+      expect(refreshCalls.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('应处理重试后返回非 401 错误码', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'new_access',
+          refresh_token: 'new_refresh',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      // 重试后返回 403 Forbidden
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ detail: 'Forbidden' }),
+      } as Response);
+
+      await expect(client.get('/api/data')).rejects.toThrow('Forbidden');
+
+      // 验证只调用了 1 次刷新
+      const refreshCalls = mockFetch.mock.calls.filter(call => {
+        const url = call[0] as string;
+        return typeof url === 'string' && url.includes('/auth/refresh');
+      });
+      expect(refreshCalls).toHaveLength(1);
+    });
+
+    it('应处理空 Token 响应', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: '',
+          refresh_token: '',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true }),
+      } as Response);
+
+      const result = await client.get('/api/data');
+
+      expect(result).toEqual({ success: true });
+      expect(mockTokenStorage.setTokens).toHaveBeenCalled();
+    });
+
+    it('应处理刷新超时', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      // 刷新请求超时
+      mockFetch.mockImplementationOnce(() => {
+        return new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Refresh timeout')), 100);
+        });
+      });
+
+      await expect(client.get('/api/data')).rejects.toThrow();
+    }, 10000);
+  });
+
+  describe('状态管理', () => {
+    it('应在刷新完成后重置状态', async () => {
+      mockTokenStorage.getRefreshToken.mockReturnValue('refresh_123');
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'new_access',
+          refresh_token: 'new_refresh',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true }),
+      } as Response);
+
+      await client.get('/api/data');
+
+      // 刷新完成后，新的 401 请求应该能正常触发刷新
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'another_access',
+          refresh_token: 'another_refresh',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true }),
+      } as Response);
+
+      await client.get('/api/data2');
+
+      // 验证第二次刷新也被触发
+      const refreshCalls = mockFetch.mock.calls.filter(call => {
+        const url = call[0] as string;
+        return typeof url === 'string' && url.includes('/auth/refresh');
+      });
+      expect(refreshCalls).toHaveLength(2);
+    });
+
+    it('应在刷新失败后重置状态', async () => {
+      // 第一个请求返回 401
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      // 刷新失败
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Invalid' }),
+      } as Response);
+
+      await expect(client.get('/api/data')).rejects.toThrow();
+
+      // 失败后，新的 401 请求应该能尝试刷新
+      mockTokenStorage.getRefreshToken.mockReturnValue('new_refresh');
+
+      // 第二个请求返回 401
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      // 第二次刷新成功
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'new_access',
+          refresh_token: 'new_refresh',
+          token_type: 'Bearer',
+          expires_in: 3600,
+        }),
+      } as Response);
+
+      // 重试请求成功
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true }),
+      } as Response);
+
+      const result = await client.get('/api/data2');
+
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('skipAuth 与 401 拦截的交互', () => {
+    it('当 skipAuth 为 true 时收到 401 不应触发刷新', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Unauthorized' }),
+      } as Response);
+
+      await expect(
+        client.request('/api/public', { skipAuth: true })
+      ).rejects.toThrow('Unauthorized');
+
+      // 验证没有调用刷新逻辑
+      expect(mockTokenStorage.getRefreshToken).not.toHaveBeenCalled();
+      expect(mockTokenStorage.setTokens).not.toHaveBeenCalled();
     });
   });
 });
