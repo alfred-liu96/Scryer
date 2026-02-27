@@ -9,7 +9,7 @@ import logging
 from typing import AsyncGenerator
 
 import structlog
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -192,3 +192,124 @@ def get_request_id(request) -> str | None:
     from ..middleware.request_id import get_request_id as _get_request_id
 
     return _get_request_id(request)
+
+
+async def get_current_user_id(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    jwt_service: JWTService = Depends(get_jwt_service),
+) -> int:
+    """获取当前认证用户的 ID
+
+    从 JWT Token 中提取用户 ID，不查询数据库。
+
+    Args:
+        credentials: HTTP Bearer 认证凭证
+        jwt_service: JWT 服务
+
+    Returns:
+        int: 当前认证用户的 ID
+
+    Raises:
+        HTTPException: Token 无效、过期或类型错误 (401)
+
+    设计原则：
+        - 轻量级：仅提取 user_id，不查询数据库
+        - 安全性：仍然验证 Token 有效性和类型
+        - 适用场景：只需要 user_id 的操作
+
+    示例：
+        ```python
+        @router.patch("/users/me/profile")
+        async def update_profile(
+            profile_data: ProfileUpdate,
+            user_id: int = Depends(get_current_user_id),
+            session: AsyncSession = Depends(get_db_session),
+        ):
+            # 使用 user_id 更新资料
+            ...
+        ```
+    """
+    token = credentials.credentials
+
+    try:
+        # 验证 Token
+        payload = jwt_service.verify_access_token(token)
+        user_id = int(payload["sub"])
+        return user_id
+    except InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        ) from e
+    except TokenExpiredError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        ) from e
+
+
+def require_auth(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    jwt_service: JWTService = Depends(get_jwt_service),
+) -> int:
+    """认证依赖装饰器
+
+    验证 JWT Token 并将 user_id 注入到 request.state 中。
+
+    Args:
+        request: FastAPI 请求对象
+        credentials: HTTP Bearer 认证凭证
+        jwt_service: JWT 服务
+
+    Returns:
+        int: 当前认证用户的 ID
+
+    Raises:
+        HTTPException: Token 无效、过期或类型错误 (401)
+
+    设计原则：
+        - 双模式：可作为依赖注入或装饰器使用
+        - 副作用：将 user_id 写入 request.state.user_id
+        - 灵活性：支持声明式路由保护
+
+    用法示例：
+        ```python
+        # 方式 1: 作为依赖注入
+        @router.get("/protected")
+        async def protected_route(
+            user_id: int = Depends(require_auth)
+        ):
+            return {"user_id": user_id}
+
+        # 方式 2: 结合 request.state 使用
+        @router.get("/protected")
+        async def protected_route(
+            request: Request,
+            _ = Depends(require_auth)  # 仅用于验证
+        ):
+            user_id = request.state.user_id
+            return {"user_id": user_id}
+        ```
+    """
+    token = credentials.credentials
+
+    try:
+        # 验证 Token
+        payload = jwt_service.verify_access_token(token)
+        user_id = int(payload["sub"])
+
+        # 注入到 request.state
+        request.state.user_id = user_id
+
+        return user_id
+    except InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        ) from e
+    except TokenExpiredError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+        ) from e
