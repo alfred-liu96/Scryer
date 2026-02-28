@@ -10,12 +10,21 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string;
 }
 
-export function Input({ label, error, className, ...props }: InputProps) {
+export function Input({ label, error, className, id, ...props }: InputProps) {
+  // 生成或使用提供的 id 来关联 label 和 input
+  const inputId = id || (label ? `input-${label.replace(/\s+/g, '-').toLowerCase()}` : undefined);
+
   return (
     <div className="input-wrapper">
-      {label && <label className="input-label">{label}</label>}
+      {label && (
+        <label htmlFor={inputId} className="input-label">
+          {label}
+        </label>
+      )}
       <input
+        id={inputId}
         className={cn('input', error && 'input-error', className)}
+        aria-invalid={!!error}
         {...props}
       />
       {error && <span className="input-error-text">{error}</span>}
