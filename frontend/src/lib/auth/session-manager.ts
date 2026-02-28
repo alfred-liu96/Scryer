@@ -50,20 +50,50 @@ const MIN_REFRESH_INTERVAL = 30 * 1000;
  * SessionManager 配置选项
  */
 export interface SessionManagerOptions {
-  /** Token 存储实例 */
+  /**
+   * Token 存储实例
+   *
+   * 用于读取和保存 Token
+   */
   tokenStorage: TokenStorage;
-  /** 认证客户端实例 */
+
+  /**
+   * 认证客户端实例
+   *
+   * 用于执行 Token 刷新和登出操作
+   */
   authClient: AuthClient;
-  /** 认证 Store 实例（可选） */
+
+  /**
+   * 认证 Store 实例（可选）
+   *
+   * 用于更新认证状态
+   * 如果不提供，刷新后仅更新 TokenStorage
+   */
   authStore?: AuthStore;
-  /** Token 刷新提前量（毫秒，默认 5 分钟） */
+
+  /**
+   * Token 刷新提前量（毫秒）
+   *
+   * @defaultValue `5 * 60 * 1000`（5 分钟）
+   */
   refreshBeforeExpiry?: number;
-  /** 是否在启动时立即检查并刷新（如果需要） */
+
+  /**
+   * 是否在启动时立即检查并刷新
+   *
+   * @defaultValue `false`
+   */
   checkOnStartup?: boolean;
 }
 
 /**
  * 会话管理器状态
+ *
+ * @remarks
+ * - `IDLE`: 未启动或无有效 Token
+ * - `RUNNING`: 定时器已激活，正在监控 Token
+ * - `STOPPED`: 已停止，定时器已清除
  */
 export enum SessionManagerStatus {
   /** 未启动 */
@@ -105,6 +135,16 @@ interface TokenRefreshResult {
  *
  * 负责管理 Token 的自动刷新生命周期，确保用户会话持续有效。
  *
+ * @remarks
+ * SessionManager 通过解析 JWT Token 的 exp 字段计算刷新时机，
+ * 在 Token 过期前 `refreshBeforeExpiry` 毫秒触发刷新。
+ *
+ * 核心功能：
+ * - 自动刷新：基于 setTimeout 调度刷新任务
+ * - 请求去重：多个并发刷新请求合并为一个
+ * - 页面可见性：页面恢复显示时主动检查 Token
+ * - 错误处理：401 错误自动登出，网络错误仅停止定时器
+ *
  * @example
  * ```ts
  * // 创建 SessionManager 实例
@@ -120,6 +160,10 @@ interface TokenRefreshResult {
  * // 停止自动刷新（组件卸载时）
  * sessionManager.stop();
  * ```
+ *
+ * @see {@link https://jwt.io/ | JWT 规范}
+ * @see AuthClient
+ * @see TokenStorage
  */
 export class SessionManager {
   /**
@@ -203,22 +247,21 @@ export class SessionManager {
   }
 
   /**
-   * 启动会话管理器（扩展版本）
+   * 启动会话管理器
    *
-   * 新增逻辑：
-   * - 在步骤 5（调度刷新）之后，注册 visibilitychange 事件监听
+   * 启动自动刷新定时器，并注册页面可见性事件监听。
    *
-   * 逻辑流程：
-   * 1. 如果定时器已存在，先清除
-   * 2. 从 TokenStorage 读取 Token
-   * 3. 获取 Token 过期时间
-   * 4. 如果启动时检查开启，检查是否需要立即刷新
-   * 5. 调度刷新
-   * 6. [新增] 注册页面可见性事件监听
+   * @remarks
+   * - 如果 Token 不存在或无法解析，保持 IDLE 状态
+   * - 如果 `checkOnStartup` 为 true 且 Token 即将过期，立即刷新
+   * - 多次调用具有幂等性（先停止再启动）
+   *
+   * @throws 此方法本身不抛出异常，但内部的 `refreshAccessToken` 可能抛出
    *
    * @example
    * ```ts
    * await sessionManager.start();
+   * console.log(sessionManager.getStatus()); // 'running'
    * ```
    */
   async start(): Promise<void> {
