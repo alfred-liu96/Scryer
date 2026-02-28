@@ -163,6 +163,21 @@ export class SessionManager {
   private status: SessionManagerStatus = SessionManagerStatus.IDLE;
 
   /**
+   * 正在进行的刷新 Promise（用于请求去重）
+   *
+   * - null: 当前没有进行中的刷新
+   * - Promise<TokenRefreshResult>: 刷新进行中，后续调用复用此 Promise
+   */
+  private refreshingPromise: Promise<TokenRefreshResult> | null = null;
+
+  /**
+   * 页面可见性变化事件处理器引用（用于移除监听）
+   *
+   * 保存绑定后的函数引用，确保 stop() 时能正确移除监听器
+   */
+  private visibilityChangeHandler: (() => void) | null = null;
+
+  /**
    * 构造函数
    *
    * @param options - SessionManager 配置选项
@@ -188,17 +203,18 @@ export class SessionManager {
   }
 
   /**
-   * 启动会话管理器
+   * 启动会话管理器（扩展版本）
+   *
+   * 新增逻辑：
+   * - 在步骤 5（调度刷新）之后，注册 visibilitychange 事件监听
    *
    * 逻辑流程：
-   * 1. 检查是否已有有效 Token
-   * 2. 如果有 Token，解析过期时间并设置定时器
-   * 3. 如果没有 Token，保持 IDLE 状态
-   *
-   * 注意：
-   * - 重复调用 start() 不会创建多个定时器
-   * - 如果已有定时器在运行，会先清除旧的定时器
-   * - 如果无法解析 Token（无效或缺少 exp），保持 IDLE 状态
+   * 1. 如果定时器已存在，先清除
+   * 2. 从 TokenStorage 读取 Token
+   * 3. 获取 Token 过期时间
+   * 4. 如果启动时检查开启，检查是否需要立即刷新
+   * 5. 调度刷新
+   * 6. [新增] 注册页面可见性事件监听
    *
    * @example
    * ```ts
@@ -240,20 +256,29 @@ export class SessionManager {
       // 如果 Token 即将过期（小于 refreshBeforeExpiry），立即刷新
       if (timeUntilExpiry < this.refreshBeforeExpiry) {
         await this.refreshAccessToken();
+        // 刷新成功后注册事件监听
+        this.setupVisibilityListener();
         return;
       }
     }
 
     // 步骤 5: 调度刷新
     this.scheduleRefresh(expiresAt);
+
+    // 步骤 6: 注册页面可见性事件监听
+    this.setupVisibilityListener();
   }
 
   /**
-   * 停止会话管理器
+   * 停止会话管理器（扩展版本）
+   *
+   * 新增逻辑：
+   * - 在清除定时器之后，移除 visibilitychange 事件监听
    *
    * 逻辑流程：
    * 1. 清除当前定时器
-   * 2. 将状态设置为 STOPPED
+   * 2. 移除页面可见性事件监听
+   * 3. 将状态设置为 STOPPED
    *
    * 注意：
    * - 重复调用 stop() 是安全的（幂等操作）
@@ -270,6 +295,10 @@ export class SessionManager {
       clearTimeout(this.refreshTimerId);
       this.refreshTimerId = null;
     }
+
+    // 移除页面可见性事件监听
+    this.removeVisibilityListener();
+
     this.status = SessionManagerStatus.STOPPED;
   }
 
@@ -333,36 +362,173 @@ export class SessionManager {
   }
 
   /**
-   * 刷新访问令牌
+   * 检查是否应该刷新 Token
+   *
+   * 判断逻辑：
+   * 1. 获取 Token 过期时间
+   * 2. 如果无法获取过期时间，返回 false
+   * 3. 计算距离过期的剩余时间
+   * 4. 如果剩余时间 < refreshBeforeExpiry，返回 true
+   *
+   * @returns 是否需要刷新
+   *
+   * @example
+   * ```ts
+   * if (this.shouldRefreshToken()) {
+   *   await this.refreshAccessToken();
+   * }
+   * ```
+   */
+  private shouldRefreshToken(): boolean {
+    const expiresAt = this.getTokenExpiry();
+    if (!expiresAt) return false;
+
+    const now = Date.now();
+    const timeUntilExpiry = expiresAt - now;
+    return timeUntilExpiry < this.refreshBeforeExpiry;
+  }
+
+  /**
+   * 处理页面可见性变化事件
    *
    * 逻辑流程：
-   * 1. 调用 AuthClient.refreshToken()
-   * 2. 如果成功，解析新 Token 并安排下一次刷新
-   * 3. 如果失败（401/网络错误），调用 AuthClient.logout() 并停止定时器
+   * 1. 检查 document.visibilityState
+   * 2. 如果变为 'visible'（页面显示）：
+   *    - 检查是否需要刷新 Token
+   *    - 如果需要，触发刷新
+   * 3. 如果变为 'hidden'（页面隐藏）：
+   *    - 不做处理（定时器继续运行，但刷新只在显示时触发）
    *
-   * 错误处理：
-   * - 401 Unauthorized: Token 刷新失败，自动登出
-   * - 网络错误: 停止定时器，等待用户手动刷新页面
-   * - 其他错误: 记录日志，停止定时器
+   * 注意：
+   * - 页面隐藏时不暂停定时器，避免页面恢复后 Token 已过期
+   * - 仅在页面显示时主动检查是否需要立即刷新
+   *
+   * @example
+   * ```ts
+   * // 用户切换标签页回来，检查 Token 是否需要刷新
+   * document.addEventListener('visibilitychange', this.handleVisibilityChange);
+   * ```
+   */
+  private handleVisibilityChange(): void {
+    // 仅在页面显示时检查是否需要刷新
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      if (this.shouldRefreshToken()) {
+        // 异步触发刷新，不阻塞事件处理
+        this.refreshAccessToken().catch(() => {
+          // 错误已在 refreshAccessToken 内部处理
+        });
+      }
+    }
+  }
+
+  /**
+   * 设置页面可见性事件监听
+   *
+   * 逻辑流程：
+   * 1. 检查是否已在浏览器环境（typeof document !== 'undefined'）
+   * 2. 创建绑定的事件处理器
+   * 3. 添加 'visibilitychange' 事件监听
+   *
+   * 注意：
+   * - 保存绑定的处理器引用，以便后续移除
+   * - 避免重复注册（检查 visibilityChangeHandler 是否已存在）
+   */
+  private setupVisibilityListener(): void {
+    // SSR 安全检查
+    if (typeof document === 'undefined') return;
+
+    // 避免重复注册
+    if (this.visibilityChangeHandler !== null) return;
+
+    // 绑定处理器
+    this.visibilityChangeHandler = () => this.handleVisibilityChange();
+    document.addEventListener('visibilitychange', this.visibilityChangeHandler);
+  }
+
+  /**
+   * 移除页面可见性事件监听
+   *
+   * 逻辑流程：
+   * 1. 检查是否有已注册的处理器
+   * 2. 如果有，移除事件监听
+   * 3. 清空处理器引用
+   *
+   * 注意：
+   * - 多次调用是安全的（幂等操作）
+   */
+  private removeVisibilityListener(): void {
+    if (typeof document === 'undefined') return;
+
+    if (this.visibilityChangeHandler !== null) {
+      document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
+      this.visibilityChangeHandler = null;
+    }
+  }
+
+  /**
+   * 刷新访问令牌（带请求去重）
+   *
+   * 逻辑流程：
+   * 1. 检查 refreshingPromise 是否存在
+   * 2. 如果存在，返回该 Promise（复用进行中的请求）
+   * 3. 如果不存在，创建新的刷新 Promise 并保存
+   * 4. 等待刷新完成
+   * 5. 清空 refreshingPromise
+   * 6. 返回刷新结果
+   *
+   * 去重机制：
+   * - 防止多个并发调用同时发起刷新请求
+   * - 确保同一时间只有一个刷新请求在进行
+   * - 所有调用者共享同一个刷新结果
    *
    * @returns Promise<TokenRefreshResult> 刷新结果
    *
    * @example
    * ```ts
-   * const result = await this.refreshAccessToken();
-   * if (!result.success) {
-   *   console.error('Refresh failed:', result.error);
-   * }
+   * // 场景：三个组件同时调用 refreshAccessToken()
+   * // 结果：只有一个 HTTP 请求被发起，其他两个等待同一个 Promise
+   * await Promise.all([
+   *   this.refreshAccessToken(),
+   *   this.refreshAccessToken(),
+   *   this.refreshAccessToken(),
+   * ]);
    * ```
    */
   private async refreshAccessToken(): Promise<TokenRefreshResult> {
+    // 步骤 1: 复用进行中的刷新请求（去重核心逻辑）
+    if (this.refreshingPromise !== null) {
+      return this.refreshingPromise;
+    }
+
+    // 步骤 2: 创建新的刷新 Promise
+    this.refreshingPromise = this.performRefresh();
+
     try {
-      // 步骤 1: 调用 authClient.refreshToken()
-      // 这会更新 TokenStorage 和 AuthStore
+      // 步骤 3: 等待刷新完成
+      const result = await this.refreshingPromise;
+      return result;
+    } finally {
+      // 步骤 4: 无论成功失败，清空 Promise 引用
+      this.refreshingPromise = null;
+    }
+  }
+
+  /**
+   * 执行实际的刷新操作（内部方法）
+   *
+   * 逻辑流程（保持原有实现）：
+   * 1. 调用 AuthClient.refreshToken()
+   * 2. 如果成功，解析新 Token 并安排下一次刷新
+   * 3. 如果失败，调用 handleRefreshFailure()
+   *
+   * @returns Promise<TokenRefreshResult> 刷新结果
+   */
+  private async performRefresh(): Promise<TokenRefreshResult> {
+    try {
+      // 调用 authClient.refreshToken()
       await this.authClient.refreshToken();
 
-      // 步骤 2: 刷新成功，重新调度下一次刷新
-      // 重新读取新的过期时间
+      // 刷新成功，重新调度下一次刷新
       const tokens = this.tokenStorage.getTokens();
       if (tokens && tokens.accessToken) {
         const payload = this.parseJWT(tokens.accessToken);
@@ -374,7 +540,6 @@ export class SessionManager {
 
       return { success: true };
     } catch (error) {
-      // 步骤 3: 刷新失败，处理错误
       const err =
         error instanceof Error ? error : new Error(String(error));
       this.handleRefreshFailure(err);
