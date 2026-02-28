@@ -590,4 +590,137 @@ describe('TokenStorage', () => {
       expect(storage2.getAccessToken()).toBe('access2');
     });
   });
+
+  describe('updateAccessToken', () => {
+    it('should update access token and preserve refresh token', () => {
+      storage.setTokens({
+        access_token: 'old_access',
+        refresh_token: 'refresh123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      });
+
+      const result = storage.updateAccessToken('new_access', 7200);
+
+      expect(result).toBe(true);
+      expect(storage.getAccessToken()).toBe('new_access');
+      expect(storage.getRefreshToken()).toBe('refresh123'); // 不变
+      const tokens = storage.getTokens();
+      expect(tokens?.expiresAt).toBeGreaterThan(Date.now() + 7000 * 1000);
+    });
+
+    it('should return false when no existing tokens', () => {
+      const result = storage.updateAccessToken('new_access', 3600);
+      expect(result).toBe(false);
+    });
+
+    it('should return false when localStorage unavailable', () => {
+      const originalLocalStorage = window.localStorage;
+      // @ts-ignore - 模拟服务端
+      delete window.localStorage;
+
+      const ssrStorage = createTokenStorage();
+      const result = ssrStorage.updateAccessToken('new_access', 3600);
+
+      expect(result).toBe(false);
+      window.localStorage = originalLocalStorage;
+    });
+
+    it('should preserve refresh token across multiple updates', () => {
+      storage.setTokens({
+        access_token: 'access1',
+        refresh_token: 'same_refresh',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      });
+
+      storage.updateAccessToken('access2', 7200);
+      expect(storage.getRefreshToken()).toBe('same_refresh');
+
+      storage.updateAccessToken('access3', 10800);
+      expect(storage.getRefreshToken()).toBe('same_refresh');
+    });
+
+    it('should update expiresAt timestamp correctly', () => {
+      storage.setTokens({
+        access_token: 'old_access',
+        refresh_token: 'refresh123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      });
+
+      const beforeTime = Date.now();
+      storage.updateAccessToken('new_access', 7200);
+      const afterTime = Date.now();
+
+      const tokens = storage.getTokens();
+      expect(tokens?.expiresAt).toBeGreaterThanOrEqual(beforeTime + 7200 * 1000);
+      expect(tokens?.expiresAt).toBeLessThanOrEqual(afterTime + 7200 * 1000);
+    });
+
+    it('should return false when localStorage write fails', () => {
+      storage.setTokens({
+        access_token: 'access',
+        refresh_token: 'refresh',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      });
+
+      // Mock setItem to throw error
+      (mockLocalStorage.setItem as jest.Mock).mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+
+      const result = storage.updateAccessToken('new_access', 3600);
+      expect(result).toBe(false);
+    });
+
+    it('should handle zero expiration time', () => {
+      storage.setTokens({
+        access_token: 'old_access',
+        refresh_token: 'refresh123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      });
+
+      const result = storage.updateAccessToken('new_access', 0);
+
+      // 更新成功，但 token 立即过期
+      expect(result).toBe(true);
+      expect(storage.getAccessToken()).toBeNull(); // 立即过期
+    });
+
+    it('should handle very long expiration time', () => {
+      storage.setTokens({
+        access_token: 'old_access',
+        refresh_token: 'refresh123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      });
+
+      const oneYearInSeconds = 365 * 24 * 60 * 60;
+      const result = storage.updateAccessToken('new_access', oneYearInSeconds);
+
+      expect(result).toBe(true);
+      const tokens = storage.getTokens();
+      expect(tokens?.expiresAt).toBeGreaterThan(Date.now() + 360 * 24 * 60 * 60 * 1000);
+    });
+
+    it('should work with custom storage key', () => {
+      const customStorage = createTokenStorage('custom_tokens');
+
+      customStorage.setTokens({
+        access_token: 'old_access',
+        refresh_token: 'refresh123',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      });
+
+      const result = customStorage.updateAccessToken('new_access', 7200);
+
+      expect(result).toBe(true);
+      expect(customStorage.getAccessToken()).toBe('new_access');
+      expect(customStorage.getRefreshToken()).toBe('refresh123');
+    });
+  });
 });

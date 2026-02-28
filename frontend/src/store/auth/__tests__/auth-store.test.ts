@@ -43,6 +43,7 @@ const createMockTokenStorage = (): TokenStorage => ({
   isTokenExpired: jest.fn(() => true),
   clearTokens: jest.fn(() => {}),
   hasValidTokens: jest.fn(() => false),
+  updateAccessToken: jest.fn(() => true),
 });
 
 describe('Auth Store - Initial State', () => {
@@ -250,6 +251,18 @@ describe('Auth Store - Authentication Flow', () => {
 
       store.getState().updateAccessToken('token3', 7200);
       expect(store.getState().accessToken).toBe('token3');
+    });
+
+    it('should sync storage when updating access token', () => {
+      store.getState().setAuthUser(MOCK_USER, 'old_access', 'refresh', 3600);
+
+      // 清除之前的调用记录
+      (mockTokenStorage.updateAccessToken as jest.Mock).mockClear();
+
+      store.getState().updateAccessToken('new_access', 7200);
+
+      expect(mockTokenStorage.updateAccessToken).toHaveBeenCalledWith('new_access', 7200);
+      expect(mockTokenStorage.updateAccessToken).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -934,5 +947,22 @@ describe('Auth Store - Token Storage Integration', () => {
     store.getState().reset();
 
     expect(mockTokenStorage.clearTokens).toHaveBeenCalledTimes(1);
+  });
+
+  it('should sync storage when updating access token', () => {
+    const mockTokenStorage = createMockTokenStorage();
+    // 添加 updateAccessToken mock
+    (mockTokenStorage.updateAccessToken as jest.Mock) = jest.fn(() => true);
+
+    const store = createAuthStore({
+      persist: false,
+      tokenStorage: mockTokenStorage,
+    });
+
+    store.getState().setAuthUser(MOCK_USER, 'old_access', 'refresh', 3600);
+    store.getState().updateAccessToken('new_access', 7200);
+
+    expect(mockTokenStorage.updateAccessToken).toHaveBeenCalledWith('new_access', 7200);
+    expect(mockTokenStorage.updateAccessToken).toHaveBeenCalledTimes(1);
   });
 });

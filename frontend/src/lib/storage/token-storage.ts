@@ -60,6 +60,18 @@ export interface TokenStorage {
    * @returns 有效返回 true
    */
   hasValidTokens(): boolean;
+
+  /**
+   * 更新访问令牌
+   *
+   * 用于 Token 刷新场景，仅更新 access_token 和过期时间，
+   * 保持 refresh_token 不变。
+   *
+   * @param accessToken - 新的访问令牌
+   * @param expiresIn - 过期时间（秒）
+   * @returns 更新成功返回 true，失败返回 false
+   */
+  updateAccessToken(accessToken: string, expiresIn: number): boolean;
 }
 
 /**
@@ -173,6 +185,35 @@ export function createTokenStorage(
 
     hasValidTokens(): boolean {
       return this.getTokens() !== null;
+    },
+
+    updateAccessToken(accessToken: string, expiresIn: number): boolean {
+      if (!available) return false;
+
+      try {
+        // 获取当前存储的 tokens
+        const currentTokens = this.getTokens();
+        if (!currentTokens) {
+          // 如果没有现有 tokens，无法更新
+          return false;
+        }
+
+        // 计算新的过期时间
+        const expiresAt = Date.now() + expiresIn * 1000;
+
+        // 更新 tokens，保持 refreshToken 不变
+        const updatedTokens: StoredTokens = {
+          accessToken,
+          refreshToken: currentTokens.refreshToken,
+          expiresAt,
+        };
+
+        localStorage.setItem(storageKey, JSON.stringify(updatedTokens));
+        return true;
+      } catch {
+        // localStorage 可能已满或其他错误
+        return false;
+      }
     },
   };
 }
