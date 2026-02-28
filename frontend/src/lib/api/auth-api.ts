@@ -18,6 +18,7 @@ import type { HttpClient } from './client';
 import type { TokenStorage } from '@/lib/storage/token-storage';
 import type { TokenResponse, UserResponse } from '@/types/auth';
 import type { LoginResponse, RegisterResponse } from '@/types/auth';
+import { setAuthToken } from '@/lib/storage/cookie-manager';
 
 /**
  * 登录/注册响应（包含用户信息和 Token）
@@ -79,6 +80,12 @@ export class AuthApi {
       expires_in: response.tokens.expires_in,
     });
 
+    // 设置 Cookie（供 Middleware 使用）
+    setAuthToken(
+      response.tokens.access_token,
+      response.tokens.expires_in
+    );
+
     return response;
   }
 
@@ -113,6 +120,12 @@ export class AuthApi {
       expires_in: response.tokens.expires_in,
     });
 
+    // 设置 Cookie（供 Middleware 使用）
+    setAuthToken(
+      response.tokens.access_token,
+      response.tokens.expires_in
+    );
+
     return response;
   }
 
@@ -145,6 +158,12 @@ export class AuthApi {
       token_type: response.token_type,
       expires_in: response.expires_in,
     });
+
+    // 更新 Cookie（供 Middleware 使用）
+    CookieManager.setAuthToken(
+      response.access_token,
+      response.expires_in
+    );
 
     return response;
   }

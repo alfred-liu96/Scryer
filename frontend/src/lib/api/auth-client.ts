@@ -24,6 +24,7 @@ import type { TokenResponse } from '@/types/auth';
 import type { HttpClient } from './client';
 import type { TokenStorage } from '@/lib/storage/token-storage';
 import type { AuthStore } from '@/store/auth/auth-store-types';
+import { setAuthToken, clearAuthToken } from '@/lib/storage/cookie-manager';
 
 // ============================================================================
 // 类型定义
@@ -174,6 +175,9 @@ export class AuthClient {
       response.expires_in
     );
 
+    // 步骤 6: 更新 Cookie（供 Middleware 使用）
+    setAuthToken(response.access_token, response.expires_in);
+
     return response;
   }
 
@@ -208,6 +212,8 @@ export class AuthClient {
     if (clearLocalState) {
       this.tokenStorage.clearTokens();
       this.authStore.clearAuth();
+      // 清除 Cookie（供 Middleware 使用）
+      clearAuthToken();
     }
   }
 }
