@@ -126,9 +126,8 @@ export function createAuthStore(
           state.tokenExpiresAt = expiresAt;
         });
 
-        // 注意：这里仅更新 access_token，refresh_token 保持不变
-        // 实际实现需要考虑如何更新 storage 中的 access_token
-        // TODO: 更新 storage 中的 access_token
+        // 同步更新 Token 存储（仅更新 access_token，refresh_token 保持不变）
+        storage.updateAccessToken(accessToken, expiresIn);
       },
 
       clearAuth: () => {
