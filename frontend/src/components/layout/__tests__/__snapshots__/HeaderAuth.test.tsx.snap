@@ -1,0 +1,41 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`HeaderAuth - 快照测试 should match snapshot when authenticated 1`] = `
+<div
+  class="header-auth flex items-center gap-3"
+>
+  <span
+    class="header-auth-username text-sm font-medium text-gray-700"
+  >
+    testuser
+  </span>
+  <button
+    aria-label="登出"
+    class="header-auth-logout btn btn-outline btn-sm"
+    type="button"
+  >
+    登出
+  </button>
+</div>
+`;
+
+exports[`HeaderAuth - 快照测试 should match snapshot when not authenticated 1`] = `null`;
+
+exports[`HeaderAuth - 快照测试 should match snapshot with empty username 1`] = `
+<div
+  class="header-auth flex items-center gap-3"
+>
+  <span
+    class="header-auth-username text-sm font-medium text-gray-700"
+  >
+    用户
+  </span>
+  <button
+    aria-label="登出"
+    class="header-auth-logout btn btn-outline btn-sm"
+    type="button"
+  >
+    登出
+  </button>
+</div>
+`;
