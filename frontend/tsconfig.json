@@ -59,7 +59,8 @@
   "include": [
     "src/**/*",
     ".next/types/**/*.ts",
-    "next-env.d.ts"
+    "next-env.d.ts",
+    "e2e/**/*"
   ],
   "exclude": [
     "node_modules",
