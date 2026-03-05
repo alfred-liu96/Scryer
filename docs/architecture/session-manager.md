@@ -528,16 +528,66 @@ function App() {
 }
 ```
 
-### 8.4 检查状态
+### 8.4 使用 useAuth Hook（推荐）
+
+在 React 应用中，推荐使用 `useAuth` Hook，它会自动管理 SessionManager 的生命周期：
 
 ```typescript
-const status = sessionManager.getStatus();
-if (status === SessionManagerStatus.RUNNING) {
-  console.log('SessionManager 正在运行');
-} else if (status === SessionManagerStatus.STOPPED) {
-  console.log('SessionManager 已停止');
+import { useAuth } from '@/lib/hooks/useAuth';
+
+function MyComponent() {
+  const { isAuthenticated, user, logout, refreshToken } = useAuth();
+
+  if (!isAuthenticated) {
+    return <LoginPrompt />;
+  }
+
+  return (
+    <div>
+      <h1>欢迎, {user?.username}!</h1>
+      <button onClick={logout}>登出</button>
+    </div>
+  );
 }
 ```
+
+**useAuth Hook 的优势**：
+
+- 自动管理 SessionManager 单例
+- 组件卸载时自动停止 SessionManager
+- 提供响应式的认证状态
+- 内置 SSR 安全检查
+
+### 8.5 在 React 组件中使用 useAuth Hook
+
+完整的用户认证流程示例：
+
+```typescript
+import { useAuth } from '@/lib/hooks/useAuth';
+
+function UserProfile() {
+  const { status, user, logout, refreshToken } = useAuth();
+
+  if (status === 'loading') {
+    return <div>Loading...</div>;
+  }
+
+  if (status === 'unauthenticated') {
+    return <LoginPrompt />;
+  }
+
+  return (
+    <div>
+      <p>Welcome, {user?.username}</p>
+      <button onClick={logout}>Logout</button>
+    </div>
+  );
+}
+```
+
+**注意**：`login` 方法由 `AuthClient` 提供，不在 `useAuth` Hook 中。如需登录功能，请直接使用 `authClient.login()`。
+
+### 8.6 检查 SessionManager 状态
 
 ---
 
@@ -664,7 +714,67 @@ await sessionManager.start();
 
 ---
 
-## 12. 参考资料
+## 13. 集成测试覆盖
+
+### 13.1 测试覆盖矩阵
+
+| 场景 | 测试文件 | 测试用例 | 状态 |
+|------|----------|----------|------|
+| **SessionManager 场景** |
+| 完整会话生命周期 | session-manager.integration.test.ts | 启动 → 多次刷新 → 停止 | ✅ |
+| Token 刷新失败登出 | session-manager.integration.test.ts | 401 错误触发自动登出 | ✅ |
+| 页面可见性处理 | session-manager.integration.test.ts | 页面隐藏/显示 + Token 即将过期 | ✅ |
+| 并发刷新去重 | session-manager.integration.test.ts | 多个组件同时触发刷新 | ✅ |
+| checkOnStartup 验证 | session-manager.integration.test.ts | 启动时立即检查并刷新 | ✅ |
+| 网络错误恢复 | session-manager.integration.test.ts | 网络错误后用户手动登录恢复 | ✅ |
+| **useAuth Hook 单元测试** |
+| 基础状态查询 | useAuth.test.ts | 返回正确的认证状态 | ✅ |
+| logout() 方法 | useAuth.test.ts | 调用 AuthClient.logout() | ✅ |
+| refreshToken() 方法 | useAuth.test.ts | 调用 AuthClient.refreshToken() | ✅ |
+| SessionManager 集成 | useAuth.test.ts | 挂载启动、卸载停止 | ✅ |
+| 状态同步 | useAuth.test.ts | 认证状态变化时更新组件 | ✅ |
+| **useAuth Hook 集成测试** |
+| 完整登录-刷新-登出流程 | useauth.integration.test.ts | 登录 → 自动刷新 → 登出 | ✅ |
+| 多组件共享 SessionManager 单例 | useauth.integration.test.ts | 多组件状态同步与引用计数 | ✅ |
+| 多组件登出状态同步 | useauth.integration.test.ts | 一个组件登出后所有组件同步 | ✅ |
+| SSR 环境安全性 | useauth.integration.test.ts | SSR 环境下安全降级 | ✅ |
+| SSR 环境调用 logout() | useauth.integration.test.ts | SSR 环境下静默返回 | ✅ |
+| SSR 环境调用 refreshToken() | useauth.integration.test.ts | SSR 环境下抛出错误 | ✅ |
+| Token 过期前自动刷新 | useauth.integration.test.ts | 快进时间触发定时器刷新 | ✅ |
+| 禁用自动启动 SessionManager | useauth.integration.test.ts | autoStartSessionManager: false | ✅ |
+| 刷新失败错误传播 | useauth.integration.test.ts | refreshToken() 失败向上传播错误 | ✅ |
+| logout 失败仍清除状态 | useauth.integration.test.ts | API 失败时仍清除本地状态 | ✅ |
+| 页面可见性处理 | useauth.integration.test.ts | visibilitychange 事件处理 | ✅ |
+| 组件卸载停止 SessionManager | useauth.integration.test.ts | 组件卸载时正确停止 | ✅ |
+| 错误处理 (clearError) | useauth.integration.test.ts | 清除认证错误 | ✅ |
+| 状态响应性 | useauth.integration.test.ts | AuthStore 变化自动更新 | ✅ |
+| 函数引用稳定性 | useauth.integration.test.ts | useCallback 稳定性验证 | ✅ |
+
+### 13.2 运行测试
+
+```bash
+# 运行所有 SessionManager 和 useAuth 测试
+cd /workspace/frontend
+npm test -- --testPathPattern="session-manager|useAuth"
+
+# 运行特定测试文件
+npm test -- session-manager.integration.test.ts
+npm test -- useAuth.test.ts
+
+# 运行测试并生成覆盖率报告
+npm test -- --coverage --testPathPattern="session-manager|useAuth"
+```
+
+### 13.3 测试环境配置
+
+- **测试框架**: Jest + @testing-library/react
+- **模拟环境**: jsdom (浏览器环境模拟)
+- **定时器模拟**: jest.useFakeTimers()
+- **固定基准时间**: 2024-01-01 00:00:00 UTC (MOCK_JWT_BASE_TIME)
+
+---
+
+## 14. 参考资料
 
 - [JWT 规范 (RFC 7519)](https://jwt.io/)
 - [Page Visibility API - MDN](https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API)
