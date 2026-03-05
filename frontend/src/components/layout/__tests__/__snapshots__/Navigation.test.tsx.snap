@@ -40,6 +40,26 @@ exports[`Navigation Component (Contract) Snapshot Contract should match snapshot
       Settings
     </span>
   </a>
+  <a
+    class="navigation-item btn-outline"
+    href="/login"
+  >
+    <span
+      class="navigation-label"
+    >
+      登录
+    </span>
+  </a>
+  <a
+    class="navigation-item btn-primary"
+    href="/register"
+  >
+    <span
+      class="navigation-label"
+    >
+      注册
+    </span>
+  </a>
 </nav>
 `;
 
@@ -80,6 +100,26 @@ exports[`Navigation Component (Contract) Snapshot Contract should match snapshot
       class="navigation-label"
     >
       Settings
+    </span>
+  </a>
+  <a
+    class="navigation-item btn-outline"
+    href="/login"
+  >
+    <span
+      class="navigation-label"
+    >
+      登录
+    </span>
+  </a>
+  <a
+    class="navigation-item btn-primary"
+    href="/register"
+  >
+    <span
+      class="navigation-label"
+    >
+      注册
     </span>
   </a>
 </nav>
@@ -125,6 +165,26 @@ exports[`Navigation Component (Contract) Snapshot Contract should match snapshot
       class="navigation-label"
     >
       Tasks
+    </span>
+  </a>
+  <a
+    class="navigation-item btn-outline"
+    href="/login"
+  >
+    <span
+      class="navigation-label"
+    >
+      登录
+    </span>
+  </a>
+  <a
+    class="navigation-item btn-primary"
+    href="/register"
+  >
+    <span
+      class="navigation-label"
+    >
+      注册
     </span>
   </a>
 </nav>

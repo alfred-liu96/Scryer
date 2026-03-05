@@ -112,6 +112,19 @@
     @apply flex items-center gap-4;
   }
 
+  /* Header 认证区域样式 */
+  .header-auth {
+    @apply flex items-center gap-3;
+  }
+
+  .header-auth-username {
+    @apply text-sm font-medium text-gray-700;
+  }
+
+  .header-auth-logout {
+    @apply btn btn-outline btn-sm;
+  }
+
   /* 底部样式 */
   .footer {
     @apply border-t border-gray-200 bg-gray-50 px-6 py-4 mt-auto;
