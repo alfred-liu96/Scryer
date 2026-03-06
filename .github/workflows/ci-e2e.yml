@@ -45,7 +45,7 @@ jobs:
       - name: Install dependencies
         working-directory: ./frontend
         run: |
-          npm ci
+          npm install
           npx playwright install --with-deps chromium
 
       # Step 4: 运行 E2E 测试
