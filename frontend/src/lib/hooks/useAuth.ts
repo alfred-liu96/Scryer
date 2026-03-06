@@ -15,6 +15,8 @@
  * - @/lib/storage/token-storage (TokenStorage)
  */
 
+'use client';
+
 import { useCallback, useEffect } from 'react';
 import { useStore } from 'zustand';
 import { authStore } from '@/store/auth/auth-store';
