@@ -36,6 +36,7 @@ repos:
         entry: pytest tests/ -q --exitfirst
         pass_filenames: false
         language: system
+        require_serial: true
 
   - repo: local
     hooks:
@@ -45,3 +46,4 @@ repos:
         pass_filenames: false
         language: system
         stages: [pre-push]
+        require_serial: true
