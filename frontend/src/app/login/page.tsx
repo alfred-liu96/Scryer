@@ -108,8 +108,5 @@ export function LoginPage(props: LoginPageProps = {}) {
 // 导出
 // ============================================================================
 
-// 命名导出 (供测试使用)
-export { LoginPage };
-
 // 默认导出 (Next.js App Router 约定)
 export default LoginPage;
