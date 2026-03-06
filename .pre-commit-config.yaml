@@ -28,3 +28,20 @@ repos:
     hooks:
       - id: flake8
         args: [--max-line-length=88, --extend-ignore=E203]
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest tests/ -q --exitfirst
+        pass_filenames: false
+        language: system
+
+  - repo: local
+    hooks:
+      - id: e2e-tests
+        name: E2E tests
+        entry: bash -c 'cd frontend && npm run test:e2e'
+        pass_filenames: false
+        language: system
+        stages: [pre-push]
