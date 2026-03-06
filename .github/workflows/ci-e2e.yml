@@ -46,7 +46,7 @@ jobs:
         working-directory: ./frontend
         run: |
           npm install
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium firefox webkit
 
       # Step 4: 运行 E2E 测试
       - name: Run Playwright tests
