@@ -3,6 +3,10 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright E2E 测试配置
  *
+ * 全局启动/关闭配置：
+ * - globalSetup: 启动 Docker 基础设施和后端服务
+ * - globalTeardown: 清理所有服务
+ *
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
@@ -10,6 +14,15 @@ export default defineConfig({
   // 测试目录配置
   // ---------------------------------------------------------------------------
   testDir: './e2e',
+
+  // ---------------------------------------------------------------------------
+  // 全局启动/关闭配置
+  // ---------------------------------------------------------------------------
+  // 全局启动：启动 Docker 基础设施和后端服务
+  globalSetup: require.resolve('./e2e/globalSetup.ts'),
+
+  // 全局关闭：清理所有服务
+  globalTeardown: require.resolve('./e2e/globalTeardown.ts'),
 
   // 完整运行时每个测试的超时时间（毫秒）
   timeout: 30 * 1000,
@@ -68,6 +81,7 @@ export default defineConfig({
   // ---------------------------------------------------------------------------
   // 开发服务器配置
   // ---------------------------------------------------------------------------
+  // 注意：后端服务在 globalSetup 中启动，这里只启动前端
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
