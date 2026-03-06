@@ -109,8 +109,5 @@ export function RegisterPage(props: RegisterPageProps = {}) {
 // 导出
 // ============================================================================
 
-// 命名导出 (供测试使用)
-export { RegisterPage };
-
 // 默认导出 (Next.js App Router 约定)
 export default RegisterPage;
