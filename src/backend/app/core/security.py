@@ -107,7 +107,7 @@ class SecurityService:
         salt = bcrypt.gensalt(rounds=self._rounds, prefix=b"2b")
         hashed = bcrypt.hashpw(password_bytes, salt)
 
-        return hashed.decode("utf-8")
+        return str(hashed.decode("utf-8"))
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """验证密码
@@ -126,7 +126,7 @@ class SecurityService:
         try:
             password_bytes = plain_password.encode("utf-8")[:72]
             hashed_bytes = hashed_password.encode("utf-8")
-            return bcrypt.checkpw(password_bytes, hashed_bytes)
+            return bool(bcrypt.checkpw(password_bytes, hashed_bytes))
         except Exception:
             # 哈希格式错误或其他异常，统一返回 False
             return False
@@ -261,11 +261,12 @@ class JWTService:
         Returns:
             str: JWT Token 字符串
         """
-        return jwt.encode(
+        token: str = jwt.encode(
             payload,
             self._settings.jwt_secret_key,
             algorithm=self._settings.jwt_algorithm,
         )
+        return token
 
     # ==================== Token 解析与验证 ====================
 
@@ -283,7 +284,7 @@ class JWTService:
             TokenExpiredError: Token 已过期
         """
         try:
-            payload = jwt.decode(
+            payload: dict[str, Any] = jwt.decode(
                 token,
                 self._settings.jwt_secret_key,
                 algorithms=[self._settings.jwt_algorithm],
@@ -404,7 +405,8 @@ class JWTService:
         """
         try:
             payload = jwt.get_unverified_claims(token)
-            return payload.get("sub", "")
+            user_id: str = payload.get("sub", "")
+            return user_id
         except JWTError as e:
             raise InvalidTokenError(f"Cannot extract user_id: {str(e)}") from e
 

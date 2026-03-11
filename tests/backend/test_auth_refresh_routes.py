@@ -21,12 +21,12 @@ class TestRefreshRouterDefinition:
     def test_refresh_endpoint_exists(self):
         """测试刷新端点存在
 
-        验证路由数量从 3 增加到 4
+        验证路由数量从 3 增加到 5（新增 refresh 和 update 端点）
         """
         # 原有路由: /register, /login, /me (3个)
         # 新增路由: /refresh (1个)
-        # 总数应该是 4
-        assert len(router.routes) == 4
+        # 总数应该是 5
+        assert len(router.routes) == 5
 
     def test_refresh_endpoint_path(self):
         """测试刷新端点路径正确"""

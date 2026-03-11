@@ -24,21 +24,22 @@ from src.backend.app.core.config import Settings, get_settings
 class TestSettingsModel:
     """测试 Settings 模型的基础功能"""
 
-    def test_settings_with_default_values(self):
+    def test_settings_with_default_values(self, monkeypatch):
         """测试使用默认值创建 Settings"""
         # 确保环境变量未设置
-        env_vars = ["APP_NAME", "APP_VERSION", "DEBUG", "API_PREFIX"]
+        env_vars = ["APP_NAME", "APP_VERSION", "DEBUG", "API_PREFIX", "ENVIRONMENT"]
         for var in env_vars:
-            if var in os.environ:
-                del os.environ[var]
+            monkeypatch.delenv(var, raising=False)
 
-        settings = Settings()
+        # 创建 Settings 时忽略 .env 文件
+        settings = Settings(_env_file=None)
 
         # 验证默认值
         assert settings.app_name == "Scryer"
         assert settings.app_version == "0.1.0"
         assert settings.debug is False
         assert settings.api_prefix == "/api"
+        assert settings.environment == "production"
 
     def test_settings_from_environment_variables(self):
         """测试从环境变量加载配置"""
@@ -91,7 +92,10 @@ class TestSettingsModel:
             Settings(secret_key="short")
 
         # 验证错误信息包含最少长度要求
-        assert "at least 32 characters" in str(exc_info.value).lower() or "min_length" in str(exc_info.value).lower()
+        assert (
+            "at least 32 characters" in str(exc_info.value).lower()
+            or "min_length" in str(exc_info.value).lower()
+        )
 
     def test_settings_valid_secret_key(self):
         """测试有效的 SECRET_KEY"""
@@ -103,7 +107,10 @@ class TestSettingsModel:
         """测试 CORS 源的默认值"""
         settings = Settings()
         # 默认应该只允许 localhost
-        assert "http://localhost:3000" in settings.cors_origins or settings.cors_origins == []
+        assert (
+            "http://localhost:3000" in settings.cors_origins
+            or settings.cors_origins == []
+        )
 
     def test_settings_cors_origins_custom(self):
         """测试自定义 CORS 源"""
