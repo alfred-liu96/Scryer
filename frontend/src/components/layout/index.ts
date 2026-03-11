@@ -8,3 +8,4 @@ export { Navigation } from './Navigation';
 export { MobileMenu } from './MobileMenu';
 export { MainLayout } from './MainLayout';
 export { PageSkeleton } from './PageSkeleton';
+export { HeaderAuth } from './HeaderAuth';
