@@ -17,7 +17,7 @@
 import type { HttpClient } from './client';
 import type { TokenStorage } from '@/lib/storage/token-storage';
 import type { TokenResponse, UserResponse } from '@/types/auth';
-import type { LoginResponse, RegisterResponse } from '@/types/auth';
+import type { LoginResponse, RegisterResponse, UserUpdateRequest, UserUpdateResponse } from '@/types/auth';
 import { setAuthToken } from '@/lib/storage/cookie-manager';
 
 /**
@@ -160,7 +160,7 @@ export class AuthApi {
     });
 
     // 更新 Cookie（供 Middleware 使用）
-    CookieManager.setAuthToken(
+    setAuthToken(
       response.access_token,
       response.expires_in
     );
@@ -179,6 +179,31 @@ export class AuthApi {
   async getCurrentUser(): Promise<UserResponse> {
     // 发送请求（需要认证，HttpClient 会自动注入 Token）
     return this.httpClient.get<UserResponse>('/api/v1/auth/me');
+  }
+
+  /**
+   * 更新当前用户资料
+   *
+   * 对应后端：PATCH /api/v1/auth/me
+   *
+   * @param data - 更新数据 (username 和/或 email)
+   * @returns 更新后的用户信息
+   * @throws {Error} 更新失败时抛出异常
+   *
+   * @example
+   * ```ts
+   * // 仅更新用户名
+   * const user = await authApi.updateProfile({ username: 'newname' });
+   *
+   * // 同时更新用户名和邮箱
+   * const user = await authApi.updateProfile({
+   *   username: 'newname',
+   *   email: 'new@email.com'
+   * });
+   * ```
+   */
+  async updateProfile(data: UserUpdateRequest): Promise<UserUpdateResponse> {
+    return this.httpClient.patch<UserUpdateResponse>('/api/v1/auth/me', data, undefined);
   }
 }
 
