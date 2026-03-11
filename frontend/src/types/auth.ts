@@ -131,3 +131,73 @@ export interface RefreshTokenRequest {
  * 与 TokenResponse 结构完全一致
  */
 export type RefreshTokenResponse = TokenResponse;
+
+// ============================================================================
+// 用户资料更新相关类型 (新增)
+// ============================================================================
+
+/**
+ * 用户资料更新请求模型
+ * 对应后端 UserUpdateRequest schema
+ */
+export interface UserUpdateRequest {
+  /** 用户名 (可选, 3-50 字符) */
+  username?: string;
+  /** 邮箱地址 (可选) */
+  email?: string;
+}
+
+/**
+ * 用户资料更新响应模型
+ * 对应后端 UserResponse schema (与 getCurrentUser 返回类型一致)
+ */
+export type UserUpdateResponse = UserResponse;
+
+/**
+ * 用户资料表单数据
+ * 用于 ProfileForm 组件内部状态管理
+ */
+export interface ProfileFormData {
+  /** 用户名 */
+  username: string;
+  /** 邮箱地址 */
+  email: string;
+}
+
+/**
+ * 用户资料表单错误
+ */
+export interface ProfileFormErrors {
+  /** 用户名错误 */
+  username?: string;
+  /** 邮箱错误 */
+  email?: string;
+}
+
+/**
+ * API 错误响应类型 (扩展现有定义)
+ */
+export interface ApiErrorResponse {
+  /** 错误详情 */
+  detail: string;
+  /** 冲突字段 (用于 409 错误) */
+  field?: 'username' | 'email';
+}
+
+/**
+ * 用户资料更新错误类型枚举
+ */
+export enum ProfileUpdateErrorType {
+  /** 用户名已存在 */
+  USERNAME_EXISTS = 'USERNAME_EXISTS',
+  /** 邮箱已存在 */
+  EMAIL_EXISTS = 'EMAIL_EXISTS',
+  /** 网络错误 */
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  /** 验证错误 */
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  /** 未认证 */
+  UNAUTHORIZED = 'UNAUTHORIZED',
+  /** 未知错误 */
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+}

@@ -38,6 +38,7 @@ const createMockHttpClient = (): HttpClient => ({
   post: jest.fn(),
   get: jest.fn(),
   put: jest.fn(),
+  patch: jest.fn(),
   delete: jest.fn(),
   request: jest.fn(),
 });
@@ -529,6 +530,185 @@ describe('AuthApi', () => {
       await expect(authApi.getCurrentUser()).rejects.toThrow(
         'Internal Server Error'
       );
+    });
+  });
+
+  // ==========================================================================
+  // updateProfile() - 成功场景
+  // ==========================================================================
+
+  describe('updateProfile()', () => {
+    it('should update profile successfully with username only', async () => {
+      // Arrange
+      const updateData = { username: 'newusername' };
+      const mockResponse = createMockUserResponse({ username: 'newusername' });
+
+      (mockHttpClient.patch as jest.Mock).mockResolvedValue(mockResponse);
+
+      // Act
+      const result = await authApi.updateProfile(updateData);
+
+      // Assert
+      expect(mockHttpClient.patch).toHaveBeenCalledTimes(1);
+      expect(mockHttpClient.patch).toHaveBeenCalledWith(
+        '/api/v1/auth/me',
+        updateData,
+        undefined
+      );
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should update profile successfully with email only', async () => {
+      // Arrange
+      const updateData = { email: 'new@example.com' };
+      const mockResponse = createMockUserResponse({ email: 'new@example.com' });
+
+      (mockHttpClient.patch as jest.Mock).mockResolvedValue(mockResponse);
+
+      // Act
+      const result = await authApi.updateProfile(updateData);
+
+      // Assert
+      expect(mockHttpClient.patch).toHaveBeenCalledWith(
+        '/api/v1/auth/me',
+        updateData,
+        undefined
+      );
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should update profile successfully with both username and email', async () => {
+      // Arrange
+      const updateData = {
+        username: 'newusername',
+        email: 'new@example.com',
+      };
+      const mockResponse = createMockUserResponse({
+        username: 'newusername',
+        email: 'new@example.com',
+      });
+
+      (mockHttpClient.patch as jest.Mock).mockResolvedValue(mockResponse);
+
+      // Act
+      const result = await authApi.updateProfile(updateData);
+
+      // Assert
+      expect(mockHttpClient.patch).toHaveBeenCalledWith(
+        '/api/v1/auth/me',
+        updateData,
+        undefined
+      );
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should return updated user response with all fields', async () => {
+      // Arrange
+      const updateData = { username: 'newuser' };
+      const mockResponse: UserResponse = {
+        id: 1,
+        username: 'newuser',
+        email: 'test@example.com',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      };
+
+      (mockHttpClient.patch as jest.Mock).mockResolvedValue(mockResponse);
+
+      // Act
+      const result = await authApi.updateProfile(updateData);
+
+      // Assert
+      expect(result.id).toBe(1);
+      expect(result.username).toBe('newuser');
+      expect(result.email).toBe('test@example.com');
+      expect(result.is_active).toBe(true);
+    });
+  });
+
+  // ==========================================================================
+  // updateProfile() - 失败场景
+  // ==========================================================================
+
+  describe('updateProfile() - Error Scenarios', () => {
+    it('should handle 400 bad request (validation error)', async () => {
+      // Arrange
+      const mockError = new Error('Validation error');
+      (mockError as any).status = 400;
+
+      (mockHttpClient.patch as jest.Mock).mockRejectedValue(mockError);
+
+      // Act & Assert
+      await expect(
+        authApi.updateProfile({ username: 'ab' })
+      ).rejects.toThrow('Validation error');
+    });
+
+    it('should handle 401 unauthorized error', async () => {
+      // Arrange
+      const mockError = new Error('Not authenticated');
+      (mockError as any).status = 401;
+
+      (mockHttpClient.patch as jest.Mock).mockRejectedValue(mockError);
+
+      // Act & Assert
+      await expect(
+        authApi.updateProfile({ username: 'newuser' })
+      ).rejects.toThrow('Not authenticated');
+    });
+
+    it('should handle 409 conflict (username already exists)', async () => {
+      // Arrange
+      const mockError = new Error('Username already exists');
+      (mockError as any).status = 409;
+      (mockError as any).field = 'username';
+
+      (mockHttpClient.patch as jest.Mock).mockRejectedValue(mockError);
+
+      // Act & Assert
+      await expect(
+        authApi.updateProfile({ username: 'existinguser' })
+      ).rejects.toThrow('Username already exists');
+    });
+
+    it('should handle 409 conflict (email already exists)', async () => {
+      // Arrange
+      const mockError = new Error('Email already exists');
+      (mockError as any).status = 409;
+      (mockError as any).field = 'email';
+
+      (mockHttpClient.patch as jest.Mock).mockRejectedValue(mockError);
+
+      // Act & Assert
+      await expect(
+        authApi.updateProfile({ email: 'existing@example.com' })
+      ).rejects.toThrow('Email already exists');
+    });
+
+    it('should handle network error', async () => {
+      // Arrange
+      const networkError = new Error('Network error');
+      networkError.name = 'NetworkError';
+
+      (mockHttpClient.patch as jest.Mock).mockRejectedValue(networkError);
+
+      // Act & Assert
+      await expect(
+        authApi.updateProfile({ username: 'newuser' })
+      ).rejects.toThrow('Network error');
+    });
+
+    it('should handle 500 server error', async () => {
+      // Arrange
+      const serverError = new Error('Internal Server Error');
+      (serverError as any).status = 500;
+
+      (mockHttpClient.patch as jest.Mock).mockRejectedValue(serverError);
+
+      // Act & Assert
+      await expect(
+        authApi.updateProfile({ username: 'newuser' })
+      ).rejects.toThrow('Internal Server Error');
     });
   });
 });
