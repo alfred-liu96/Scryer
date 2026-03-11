@@ -194,7 +194,8 @@ class AuthService:
             InvalidTokenError: Token 无效
             TokenExpiredError: Token 已过期
         """
-        return self._jwt.verify_access_token(token)
+        payload: dict[str, Any] = self._jwt.verify_access_token(token)
+        return payload
 
 
 # ==================== 模块导出 ====================

@@ -12,7 +12,13 @@ from ...core.exceptions import ConflictError
 from ...core.security import SecurityService
 from ...models.user import User
 from ...repositories.user import UserRepository
-from ...schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, UserResponse
+from ...schemas.auth import (
+    LoginRequest,
+    RefreshRequest,
+    RegisterRequest,
+    UserResponse,
+    UserUpdateRequest,
+)
 from ...services.auth import AuthService, TokenResponse
 from ..deps import (
     get_auth_service,
@@ -307,5 +313,84 @@ async def get_current_user_info(
     3. 查询用户信息（由 get_current_user 依赖完成）
     4. 返回用户信息
     """
+    response: UserResponse = UserResponse.model_validate(current_user)
+    return response
+
+
+@router.patch(
+    "/me",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="更新当前用户信息",
+    description="更新当前认证用户的基本信息（用户名或邮箱），需要提供有效的 JWT Token",
+    responses={
+        400: {
+            "description": "请求体验证失败",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Validation error",
+                        "errors": [
+                            {
+                                "loc": ["body", "username"],
+                                "msg": "String should have at least 3 characters",
+                                "type": "string_too_short",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        401: {
+            "description": "未认证或 Token 无效",
+            "content": {"application/json": {"example": {"detail": "Invalid token"}}},
+        },
+        409: {
+            "description": "用户名或邮箱已存在",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Username already exists",
+                        "field": "username",
+                    }
+                }
+            },
+        },
+    },
+)
+async def update_current_user(
+    request: UserUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    user_repo: UserRepository = Depends(get_user_repository),
+    session: AsyncSession = Depends(get_db_session),
+) -> UserResponse:
+    """更新当前用户信息端点
+
+    业务逻辑：
+    1. 验证请求体（Pydantic 自动验证）
+    2. 从 JWT Token 中获取当前用户（由 get_current_user 依赖完成）
+    3. 检查用户名是否已被其他用户使用（如果更新用户名）
+    4. 检查邮箱是否已被其他用户使用（如果更新邮箱）
+    5. 更新用户信息
+    6. 保存到数据库
+    7. 返回更新后的用户信息
+    """
+    # 检查用户名是否已被其他用户使用
+    if request.username is not None and request.username != current_user.username:
+        if await user_repo.username_exists(request.username):
+            raise ConflictError("Username already exists", extra={"field": "username"})
+        current_user.username = request.username
+
+    # 检查邮箱是否已被其他用户使用
+    if request.email is not None and request.email != current_user.email:
+        if await user_repo.email_exists(request.email):
+            raise ConflictError("Email already exists", extra={"field": "email"})
+        current_user.email = request.email
+
+    # 保存到数据库
+    await session.commit()
+    await session.refresh(current_user)
+
+    # 返回更新后的用户信息
     response: UserResponse = UserResponse.model_validate(current_user)
     return response

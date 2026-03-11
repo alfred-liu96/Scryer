@@ -69,6 +69,37 @@ class RefreshRequest(BaseModel):
     refresh_token: str = Field(..., min_length=1, description="刷新 Token")
 
 
+class UserUpdateRequest(BaseModel):
+    """用户资料更新请求模型
+
+    用于更新用户名和邮箱，所有字段均为可选
+    但至少需要提供其中一个字段
+
+    Attributes:
+        username (str | None): 用户名，3-50 字符
+        email (EmailStr | None): 邮箱地址
+    """
+
+    username: str | None = Field(
+        default=None, min_length=3, max_length=50, description="用户名"
+    )
+    email: EmailStr | None = Field(default=None, description="邮箱地址")
+
+    @model_validator(mode="after")
+    def validate_at_least_one_field(self) -> "UserUpdateRequest":
+        """验证至少提供一个字段用于更新
+
+        Returns:
+            验证通过的实例
+
+        Raises:
+            ValueError: 当 username 和 email 均为 None 时抛出
+        """
+        if self.username is None and self.email is None:
+            raise ValueError("至少需要提供一个字段进行更新（username 或 email）")
+        return self
+
+
 class UserResponse(BaseModel):
     """用户信息响应模型
 
