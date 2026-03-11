@@ -178,6 +178,206 @@ export class LoginPage {
 }
 
 // ============================================================================
+// 用户资料页面
+// ============================================================================
+
+/**
+ * 用户资料页面类
+ */
+export class ProfilePage {
+  readonly page: Page;
+
+  // 页面 URL
+  static readonly URL = '/profile';
+
+  // 页面容器选择器
+  readonly pageContainer: Locator;
+  readonly loadingContainer: Locator;
+  readonly errorContainer: Locator;
+  readonly emptyContainer: Locator;
+  readonly pageTitle: Locator;
+
+  // UserInfoCard 元素选择器
+  readonly userInfoCard: Locator;
+  readonly userId: Locator;
+  readonly userUsername: Locator;
+  readonly userEmail: Locator;
+  readonly userCreatedAt: Locator;
+  readonly userStatus: Locator;
+  readonly editButton: Locator;
+
+  // ProfileForm 元素选择器
+  readonly profileForm: Locator;
+  readonly formTitle: Locator;
+  readonly usernameInput: Locator;
+  readonly emailInput: Locator;
+  readonly submitButton: Locator;
+  readonly cancelButton: Locator;
+  readonly errorMessage: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+
+    // 页面容器
+    this.pageContainer = page.locator('.profile-page');
+    this.loadingContainer = page.locator('.profile-page-loading');
+    this.errorContainer = page.locator('.profile-page-error');
+    this.emptyContainer = page.locator('.profile-page-empty');
+    this.pageTitle = page.locator('.profile-page-title');
+
+    // UserInfoCard 元素
+    this.userInfoCard = page.locator('.user-info-card');
+    this.userId = page.locator('[data-testid="user-id"]');
+    this.userUsername = page.locator('[data-testid="user-username"]');
+    this.userEmail = page.locator('[data-testid="user-email"]');
+    this.userCreatedAt = page.locator('[data-testid="user-created-at"]');
+    this.userStatus = page.locator('[data-testid="user-status"]');
+    this.editButton = page.locator('.user-info-edit-btn');
+
+    // ProfileForm 元素
+    this.profileForm = page.locator('.profile-form');
+    this.formTitle = page.locator('.profile-form-title');
+    this.usernameInput = page.locator('[data-testid="profile-username-input"]');
+    this.emailInput = page.locator('[data-testid="profile-email-input"]');
+    this.submitButton = page.locator('[data-testid="profile-submit-btn"]');
+    this.cancelButton = page.locator('[data-testid="profile-cancel-btn"]');
+    this.errorMessage = page.locator('.alert-error, .error-message, [data-testid="error"]');
+  }
+
+  /**
+   * 导航到用户资料页面
+   */
+  async goto(): Promise<void> {
+    await this.page.goto(ProfilePage.URL);
+  }
+
+  /**
+   * 点击编辑按钮进入编辑模式
+   */
+  async clickEdit(): Promise<void> {
+    await this.editButton.click();
+  }
+
+  /**
+   * 点击取消按钮退出编辑模式
+   */
+  async clickCancel(): Promise<void> {
+    await this.cancelButton.click();
+  }
+
+  /**
+   * 填写用户名
+   * @param username - 新用户名
+   */
+  async fillUsername(username: string): Promise<void> {
+    await this.usernameInput.fill(username);
+  }
+
+  /**
+   * 填写邮箱
+   * @param email - 新邮箱
+   */
+  async fillEmail(email: string): Promise<void> {
+    await this.emailInput.fill(email);
+  }
+
+  /**
+   * 更新用户资料
+   * @param username - 新用户名（可选）
+   * @param email - 新邮箱（可选）
+   */
+  async updateProfile(username?: string, email?: string): Promise<void> {
+    if (username !== undefined) {
+      await this.fillUsername(username);
+    }
+    if (email !== undefined) {
+      await this.fillEmail(email);
+    }
+    await this.submitButton.click();
+  }
+
+  /**
+   * 获取用户名输入框的值
+   */
+  async getUsernameValue(): Promise<string> {
+    return this.usernameInput.inputValue();
+  }
+
+  /**
+   * 获取邮箱输入框的值
+   */
+  async getEmailValue(): Promise<string> {
+    return this.emailInput.inputValue();
+  }
+
+  /**
+   * 获取显示的用户名
+   */
+  async getDisplayUsername(): Promise<string | null> {
+    return this.userUsername.textContent();
+  }
+
+  /**
+   * 获取显示的邮箱
+   */
+  async getDisplayEmail(): Promise<string | null> {
+    return this.userEmail.textContent();
+  }
+
+  /**
+   * 获取错误消息
+   */
+  async getErrorMessage(): Promise<string | null> {
+    const isVisible = await this.errorMessage.isVisible().catch(() => false);
+    if (!isVisible) return null;
+    return this.errorMessage.textContent();
+  }
+
+  /**
+   * 检查是否显示错误
+   */
+  async hasError(): Promise<boolean> {
+    return this.errorMessage.isVisible().catch(() => false);
+  }
+
+  /**
+   * 检查是否处于编辑模式
+   */
+  async isEditMode(): Promise<boolean> {
+    return this.profileForm.isVisible().catch(() => false);
+  }
+
+  /**
+   * 检查是否处于查看模式
+   */
+  async isViewMode(): Promise<boolean> {
+    return this.userInfoCard.isVisible().catch(() => false);
+  }
+
+  /**
+   * 等待页面加载完成
+   */
+  async waitForLoaded(): Promise<void> {
+    await this.pageContainer.waitFor({ state: 'visible' });
+    await this.userInfoCard.waitFor({ state: 'visible' });
+  }
+
+  /**
+   * 检查提交按钮是否禁用
+   */
+  async isSubmitDisabled(): Promise<boolean> {
+    return this.submitButton.isDisabled();
+  }
+
+  /**
+   * 检查取消按钮是否禁用
+   */
+  async isCancelDisabled(): Promise<boolean> {
+    return this.cancelButton.isDisabled();
+  }
+}
+
+// ============================================================================
 // 导出工厂函数
 // ============================================================================
 
@@ -207,4 +407,19 @@ export function createRegisterPage(page: Page): RegisterPage {
  */
 export function createLoginPage(page: Page): LoginPage {
   return new LoginPage(page);
+}
+
+/**
+ * 创建用户资料页面对象
+ *
+ * @example
+ * ```ts
+ * const profilePage = createProfilePage(page);
+ * await profilePage.goto();
+ * await profilePage.clickEdit();
+ * await profilePage.updateProfile('newusername', 'new@email.com');
+ * ```
+ */
+export function createProfilePage(page: Page): ProfilePage {
+  return new ProfilePage(page);
 }
